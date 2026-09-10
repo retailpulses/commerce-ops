@@ -1,0 +1,53 @@
+name = "inquiry-automation-worker"
+main = "src/index.ts"
+compatibility_date = "2025-09-06"
+
+[observability]
+enabled = true
+
+[[kv_namespaces]]
+binding = "SHOP_CACHE"
+id = "3856ef7815be43b3b8a9948c579ee30d"
+preview_id = "9987c0990b3e48469f479651099b5cb9"
+
+[[durable_objects.bindings]]
+name = "JOB_STATE"
+class_name = "JobStateDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["JobStateDO"]
+
+[triggers]
+crons = ["*/30 * * * *", "0 16 * * *"]
+
+[vars]
+# ---- Supabase (active, Phase 1) ----
+SUPABASE_URL = "https://gqeyfhshxdiyhugvmbuk.supabase.co"
+INQUIRY_AUTOMATION_WRITES_ENABLED = "true"
+INQUIRY_EXTERNAL_NOTIFICATIONS_ENABLED = "false"
+
+SHOP_CACHE_TTL_SECONDS = "0"
+MASTER_HANDLER_DEFAULT_CURSOR = "2026-04-16T14:00:00Z"
+DRY_RUN = "false"
+FORCE_REGENERATE = "false"
+MAX_ROWS_PER_RUN = "20"
+LLM_MAX_CALLS_PER_RUN = "10"
+
+# Mercari inquiry API-first write kill switches (fail closed).
+INQUIRY_MERCARI_INGEST_WRITES_ENABLED = "true"
+INQUIRY_COMPLETENESS_AUDIT_WRITES_ENABLED = "true"
+INQUIRY_OUTBOUND_SEND_ENABLED = "false"
+
+# Required secrets — set via `wrangler secret put`:
+#   SUPABASE_SERVICE_ROLE_KEY
+#   OPENAI_API_KEY
+#   DEEPSEEK_API_KEY
+#   ADMIN_TOKEN
+#   INQUIRY_AUDIT_ADMIN_TOKEN
+#   WECOM_WEBHOOK_URL
+#   MERCARI_RELAY_URL
+#   SHOP1_API_TOKEN through SHOP4_API_TOKEN
+#   MERCARI_WEBHOOK_SECRETS  (JSON map: {"shop1":"...","shop2":"..."})
+#   MERCARI_WEBHOOK_SHARED_SECRET (Mercari endpoint capability secret)
+#   MERCARI_SHOP_ID_MAP (JSON external shop_id -> shop_key)

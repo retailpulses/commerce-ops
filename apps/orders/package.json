@@ -1,0 +1,44 @@
+{
+  "name": "rp-order-mgmt",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Order management orchestrator for Mercari → GigaB2B order pipeline across 4 shops",
+  "main": "src/index.mjs",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "node --check worker/index.js",
+    "test": "node --test src/lib/__tests__/*.test.mjs test/*.test.mjs",
+    "test:unit": "node --test src/lib/__tests__/*.test.mjs",
+    "deploy:worker:dev": "echo dev deploy intentionally skipped — see docs/deployment.md",
+    "deploy:worker:prod": "wrangler deploy",
+    "tail:prod": "wrangler tail",
+    "hourly": "node src/index.mjs --mode hourly",
+    "pull-shop-orders": "node src/index.mjs --mode pull_shop_orders",
+    "build-giga-shipments": "node src/index.mjs --mode build_giga_shipments",
+    "push-orders-to-giga": "node src/index.mjs --mode push_orders_to_giga",
+    "pull-giga-tracking": "node src/index.mjs --mode pull_giga_tracking",
+    "close-shop-orders": "node src/index.mjs --mode close_shop_orders",
+    "reconcile-end-to-end": "node src/index.mjs --mode reconcile_end_to_end",
+    "backfill-shop-orders": "node scripts/backfill_shop_orders.mjs",
+    "price-seeking-helper": "node scripts/build_price_seeking_helper.mjs",
+    "migrate:portal-templates": "node scripts/migrate-portal-templates.mjs",
+    "relay:start": "node relay/server.mjs",
+    "relay:health": "curl -f http://127.0.0.1:8787/health",
+    "orchestrator:shadow": "node src/orchestrator.mjs --shadow",
+    "audit:shadow-parity": "node scripts/audit-orchestrator-shadow-parity.mjs",
+    "verify:shadow-run": "node scripts/verify-orchestrator-shadow-run.mjs",
+    "verify:workload-quiescence": "node scripts/verify-workload-quiescence.mjs",
+    "resolve:external-operation": "node scripts/resolve-external-operation.mjs",
+    "record:scheduler-ownership": "node scripts/record-scheduler-ownership.mjs",
+    "audit:strategy-readiness": "node scripts/audit-order-pipeline-strategy-readiness.mjs",
+    "check": "node --check src/index.mjs"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "wrangler": "4.80.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.2",
+    "ws": "^8.21.0"
+  }
+}

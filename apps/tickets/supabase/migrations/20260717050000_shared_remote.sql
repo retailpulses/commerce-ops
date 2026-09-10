@@ -1,0 +1,14 @@
+-- Domain: product_catalog
+-- Owner: retailpulses/RPagentOS
+-- Affected: catalogsync_marketplace_auth_identity
+-- Change class: additive
+-- Hosted write required: no
+-- Consumers: retailpulses/ticket-handling
+--
+-- Shared hosted-history alignment artifact.
+-- Canonical migration:
+-- retailpulses/RPagentOS/supabase/migrations/20260717050000_catalogsync_marketplace_auth_identity.sql
+-- Reconciliation: retailpulses/RPagentOS#32
+--
+-- Applied to the shared hosted Supabase project.
+-- This file intentionally contains no executable SQL.

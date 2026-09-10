@@ -1,0 +1,46 @@
+[Unit]
+Description=ConoHa Ticket Share Viewer
+After=network.target
+
+[Service]
+Type=simple
+User=ticket-share-viewer
+Group=ticket-share-viewer
+WorkingDirectory=/opt/ticket-share-viewer
+# Pinned, isolated Node 22 runtime; do not upgrade or reuse the host's Node 18.
+ExecStart=/opt/ticket-share-viewer/runtime/bin/node dist/index.js
+Restart=on-failure
+RestartSec=5
+MemoryMax=128M
+MemoryHigh=120M
+
+Environment=NODE_ENV=production
+# Prefer IPv4 for outbound bridge requests so CF-Connecting-IP matches
+# TICKET_SHARE_BRIDGE_ALLOWED_IPS on the Worker (ConoHa VPS egresses IPv6 by default).
+Environment=NODE_OPTIONS=--dns-result-order=ipv4first
+# Root-owned mode 0600; never place secrets in this unit or the repository.
+EnvironmentFile=/etc/ticket-share-viewer.env
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadOnlyPaths=/opt/ticket-share-viewer/dist
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0077
+TasksMax=64
+LimitNOFILE=4096
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ticket-share-viewer
+
+[Install]
+WantedBy=multi-user.target

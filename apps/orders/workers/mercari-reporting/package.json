@@ -1,0 +1,12 @@
+{
+  "name": "rp-order-mgmt-reporting",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "validate": "node --check src/index.js src/sales-brief.js src/wecom.js"
+  }
+}

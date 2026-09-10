@@ -1,0 +1,27 @@
+{
+  "contract_version": "2026-09-09.v1",
+  "request_required": [
+    "contract_version",
+    "platform",
+    "ticket_id",
+    "message",
+    "client_operation_id",
+    "reply_intent",
+    "reviewed",
+    "actor_id",
+    "expected_release_sha"
+  ],
+  "success_required": [
+    "ok",
+    "contract_version",
+    "platform",
+    "platform_message_id",
+    "sent_at",
+    "ticket_message",
+    "replayed",
+    "release_sha"
+  ],
+  "failure_required": ["ok", "contract_version", "platform", "error"],
+  "reply_intent_values": ["terminal", "holding"],
+  "unknown_request_fields": "reject"
+}

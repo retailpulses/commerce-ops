@@ -1,0 +1,27 @@
+name = "inquiry-dashboard"
+compatibility_date = "2025-09-06"
+pages_build_output_dir = "dist"
+
+[observability]
+enabled = true
+
+[vars]
+SUPABASE_URL = "https://gqeyfhshxdiyhugvmbuk.supabase.co"
+LLM_MODEL = "gpt-4o"
+INQUIRY_DASHBOARD_MUTATIONS_ENABLED = "true"
+
+[[kv_namespaces]]
+binding = "TEMPLATES_KV"
+id = "745228ac921f49a0ac9512c7a2dba61c"
+
+# Required secrets — set via `wrangler pages secret put`:
+#   SUPABASE_SERVICE_ROLE_KEY
+#   OPENAI_API_KEY
+#   CF_ACCESS_TEAM_DOMAIN
+#   CF_ACCESS_AUD
+#   CF_ACCESS_ALLOWED_EMAILS (optional exact-email allowlist)
+#   CATALOG_OWNER_API_URL (fixed owner origin; managed as a binding because
+#     Pages deployments do not reliably apply [vars] to the production project)
+#   MERCARI_RELAY_URL
+#   SHOP1_API_TOKEN through SHOP4_API_TOKEN
+#   INQUIRY_OUTBOUND_SEND_ENABLED remains a fail-closed project variable

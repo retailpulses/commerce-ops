@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ops-portal-pages-production",
+    "label": "Ops Portal",
+    "url": "https://ops-portal-39f.pages.dev",
+    "category": "Operations Portal",
+    "environment": "production",
+    "status": "active",
+    "source": "seed",
+    "notes": "Current Cloudflare Pages production URL for the internal portal."
+  },
+  {
+    "id": "ops-portal-custom-domain",
+    "label": "Ops Portal Custom Domain",
+    "url": "https://ops.homesbliss.net",
+    "category": "Operations Portal",
+    "environment": "production",
+    "status": "pending",
+    "source": "seed",
+    "notes": "Custom domain attached in Cloudflare Pages and waiting on final validation."
+  }
+]

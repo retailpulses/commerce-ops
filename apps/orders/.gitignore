@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+deliverables/
+*.log
+.env
+scripts/sales-brief.env
+.dev.vars
+.claude/
+
+.tmp/
+outputs/rakuten-supabase-parity/

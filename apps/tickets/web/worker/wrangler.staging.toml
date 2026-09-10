@@ -1,0 +1,82 @@
+name = "mercari-ticket-reports-staging"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+[[durable_objects.bindings]]
+name = "TICKET_SHARE_REPLAY_GUARD"
+class_name = "TicketShareReplayGuard"
+
+[[migrations]]
+tag = "ticket-share-replay-v1"
+new_sqlite_classes = ["TicketShareReplayGuard"]
+
+[[kv_namespaces]]
+binding = "MERCARI_REPORTS"
+id = "f3d7490e50bf4f648a1e4492d19c970b"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "copywrite-logs-staging"
+database_id = "c14e7ca1-76b2-45a0-9cf4-1276a1e51118"
+
+[[r2_buckets]]
+binding = "LEGACY_EVIDENCE"
+bucket_name = "ticketing-legacy-evidence"
+
+[[services]]
+binding = "MERCARI_SEND_PROVIDER"
+service = "ticketing-mercari-send-staging"
+
+[[services]]
+binding = "RAKUTEN_SEND_PROVIDER"
+service = "ticketing-rakuten-send-staging"
+
+[[services]]
+binding = "AMAZON_SEND_PROVIDER"
+service = "ticketing-amazon-send-staging"
+
+[[services]]
+binding = "MERCARI_INGESTION_PROVIDER"
+service = "ticketing-mercari-ingestion-staging"
+
+[[services]]
+binding = "RAKUTEN_INGESTION_PROVIDER"
+service = "ticketing-rakuten-ingestion-staging"
+
+[[services]]
+binding = "AMAZON_INGESTION_PROVIDER"
+service = "ticketing-amazon-ingestion-staging"
+
+[vars]
+PASSWORD_HASH = "5dc0beb8d36514e3174a936299ee97fefd02feb36fbd7affbbce299da6279164"
+CLOUDFLARE_ACCOUNT_ID = "3c508be87424420345cce942487c298f"
+CLOUDFLARE_KV_NAMESPACE_ID = "f3d7490e50bf4f648a1e4492d19c970b"
+
+# ── New Ticketing MVP (Supabase) ──
+ENABLE_NEW_TICKETING = "true"
+ENABLE_REACT_FRONTEND = "true"
+TICKETFORM_AUTOMATION_MODE = "shadow"
+TICKETFORM_PUBLIC_BASE_URL = "https://tickets.homesbliss.net"
+ENABLE_TICKET_SHARES = "true"
+TICKET_SHARE_PUBLIC_BASE_URL = "https://seller-share.homesbliss.net"
+TICKET_SHARE_BRIDGE_ALLOWED_IPS = "160.251.141.110"
+# ── OrderMgmt webhook forwarding (Issue #131) ──
+# Not configured for staging: forwarding is gated on the endpoint + secret pair.
+# ORDERMGMT_WEBHOOK_ENDPOINT = "..."
+# ORDERMGMT_WEBHOOK_FORWARD_SECRET — set via: npx wrangler secret put ORDERMGMT_WEBHOOK_FORWARD_SECRET --config wrangler.staging.toml
+SUPABASE_URL = "https://gqeyfhshxdiyhugvmbuk.supabase.co"
+# SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# SUPABASE_ANON_KEY — set via: npx wrangler secret put SUPABASE_ANON_KEY
+# TICKETFORM_TOKEN_SIGNING_SECRET — set via: npx wrangler secret put TICKETFORM_TOKEN_SIGNING_SECRET --config wrangler.staging.toml
+# TICKET_SHARE_TOKEN_SIGNING_SECRET — set via: npx wrangler secret put TICKET_SHARE_TOKEN_SIGNING_SECRET --config wrangler.staging.toml
+# TICKET_SHARE_BRIDGE_HMAC_SECRET — set via: npx wrangler secret put TICKET_SHARE_BRIDGE_HMAC_SECRET --config wrangler.staging.toml
+
+# No [triggers] block — cron disabled for staging.
+
+# Static assets: React frontend build output.
+# run_worker_first + binding let the Worker serve assets under both the legacy
+# /assets/* and the canonical /tickets/assets/* namespace (Issue #60).
+[assets]
+directory = "../frontend/dist"
+binding = "ASSETS"
+run_worker_first = true

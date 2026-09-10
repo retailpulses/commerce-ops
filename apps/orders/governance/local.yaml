@@ -1,0 +1,24 @@
+governance_version: "cd336f9ba787c985e175a2f7952a044342eed0fa"
+
+references:
+  database:
+    owner: retailpulses/rp-governance-kit
+
+domains_owned:
+  - order_management
+
+domains_consumed:
+  - product_catalog
+
+workloads:
+  - ordermgmt_manual_product_overrides
+
+constraints:
+  product_catalog_service_role_forbidden: true
+  product_catalog_allowed_access_paths:
+    - internal_api
+
+notes: >-
+  OrderMgmt owns order_management. RPagentOS owns product_catalog.
+  Product-catalog reads and the three approved operator override writes use
+  the RPagentOS owner API with a dedicated server-side credential.

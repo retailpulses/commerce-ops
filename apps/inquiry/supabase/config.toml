@@ -1,0 +1,18 @@
+# Supabase local development configuration
+# Project: retailpulses_shared (gqeyfhshxdiyhugvmbuk)
+# Domain: inquiry_management (governance domain, tables live in public schema)
+# Owner: retailpulses/inquiry-automation
+
+[db]
+# Local development port
+port = 54322
+
+# Schema: public (inquiry_management is a governance domain, not a physical Postgres schema)
+# All inquiry-automation owned tables use the pattern: inquiries, inquiry_product_links, etc.
+# This avoids search_path complexity while maintaining governance boundaries.
+
+[api]
+port = 54321
+
+[studio]
+port = 54323

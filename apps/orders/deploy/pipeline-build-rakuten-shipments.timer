@@ -1,0 +1,19 @@
+# TRANSITIONAL: per-platform timer. Will be consolidated in Phase B
+# (channel-stage timers). See issue TBD.
+#
+# build_rakuten_shipments — every 10 min Rakuten sales→Giga shipment projection.
+# Phase: build_rakuten_shipments  Kind: projection / internal_write  Risk: Medium
+
+[Unit]
+Description=OrderMgmt — build_rakuten_shipments (shipment projection)
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Timer]
+Unit=pipeline-scheduler@build_rakuten_shipments.service
+OnCalendar=*-*-* *:07,17,27,37,47,57:00
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,54 @@
+name = "rp-order-mgmt"
+main = "worker/index.js"
+compatibility_date = "2026-04-01"
+workers_dev = true
+account_id = "3c508be87424420345cce942487c298f"
+
+[observability]
+enabled = true
+
+[triggers]
+crons = [
+  "1 * * * *",
+  "2 * * * *",
+  "3,13,23,33,43,53 * * * *",
+  "4,14,24,34,44,54 * * * *",
+  "6,16,26,36,46,56 * * * *",
+  "7,17,27,37,47,57 * * * *",
+  "5,15,25,35,45,55 * * * *",
+  "8,18,28,38,48,58 * * * *",
+  "9,19,29,39,49,59 * * * *",
+  "10,20,30,40,50 * * * *",
+  "0 23 * * *",
+]
+
+[vars]
+WORKER_ENV = "prod"
+DATABASE_BACKEND = "supabase"
+RELEASE_VERSION = "2026.6.2.1"
+BASEROW_API_BASE = "https://api.baserow.io/api"
+BASEROW_MERCARI_SALES_ORDER_TABLE_ID = "903318"
+BASEROW_RAKUTEN_SALES_ORDER_TABLE_ID = "1015675"
+BASEROW_GIGA_SHIPMENT_ORDER_TABLE_ID = "903319"
+ORDER_MGMT_LIMIT = "100"
+GIGA_OUTBOUND_RETRY_AFTER_MINUTES = "30"
+TRACKING_STUCK_THRESHOLD_MINUTES = "60"
+SHOP_CLOSE_STUCK_THRESHOLD_MINUTES = "30"
+GIGA_API_BASE_URL = "https://openapi.gigab2b.com"
+MERCARI_RUNNER_BASE_URL = "https://worker-order.homesbliss.net"
+# Portal vars (order.homesbliss.net)
+PORTAL_PRODUCTS_TABLE_ID = "886994"
+PORTAL_COMMISSION_RATE_MERCARI = "0.10"
+# NOTE: PORTAL_ACCESS_TOKEN is a Worker secret — set via `wrangler secret put PORTAL_ACCESS_TOKEN`
+# NOTE: OPENAI_API_KEY is a Worker secret — set via `wrangler secret put OPENAI_API_KEY`
+# NOTE: WEBHOOK_FORWARD_SECRET is a Worker secret — set via `wrangler secret put WEBHOOK_FORWARD_SECRET`
+# NOTE: TICKET_ORDER_CONTEXT_SECRET is a Worker secret shared only with ticket-handling.
+# NOTE: WEBHOOK_INTAKE_ENABLED=toggle — set via `wrangler secret put WEBHOOK_INTAKE_ENABLED` or wrangler.toml [vars]
+
+# LLM copywriting
+LLM_MODEL = "gpt-4o"
+LLM_MAX_TOKENS = "500"
+
+[[kv_namespaces]]
+binding = "PORTAL_KV"
+id = "39e4a9a412624893bf0ce59448843a9a"

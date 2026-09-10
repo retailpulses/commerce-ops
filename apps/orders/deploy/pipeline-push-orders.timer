@@ -1,0 +1,19 @@
+# TRANSITIONAL: per-platform timer. Will be consolidated in Phase B
+# (channel-stage timers). See issue TBD.
+#
+# push_orders_to_giga — every 10 min Mercari shipment push to GigaB2B.
+# Phase: push_orders_to_giga  Kind: push / external_write  Risk: High
+
+[Unit]
+Description=OrderMgmt — push_orders_to_giga (GigaB2B push)
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Timer]
+Unit=pipeline-scheduler@push_orders_to_giga.service
+OnCalendar=*-*-* *:06,16,26,36,46,56:00
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

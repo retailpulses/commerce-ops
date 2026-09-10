@@ -1,0 +1,90 @@
+name = "mercari-ticket-reports"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+[[durable_objects.bindings]]
+name = "TICKET_SHARE_REPLAY_GUARD"
+class_name = "TicketShareReplayGuard"
+
+[[migrations]]
+tag = "ticket-share-replay-v1"
+new_sqlite_classes = ["TicketShareReplayGuard"]
+
+[[kv_namespaces]]
+binding = "MERCARI_REPORTS"
+id = "14cd3a0ffda249b49e5c5a5d1f939f75"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "copywrite-logs"
+database_id = "c7d1b74f-2723-4e24-a2cb-8c9d2e042bac"
+
+[[r2_buckets]]
+binding = "LEGACY_EVIDENCE"
+bucket_name = "ticketing-legacy-evidence"
+
+[[services]]
+binding = "MERCARI_SEND_PROVIDER"
+service = "ticketing-mercari-send"
+
+[[services]]
+binding = "RAKUTEN_SEND_PROVIDER"
+service = "ticketing-rakuten-send"
+
+[[services]]
+binding = "AMAZON_SEND_PROVIDER"
+service = "ticketing-amazon-send"
+
+[[services]]
+binding = "MERCARI_INGESTION_PROVIDER"
+service = "ticketing-mercari-ingestion"
+
+[[services]]
+binding = "RAKUTEN_INGESTION_PROVIDER"
+service = "ticketing-rakuten-ingestion"
+
+[[services]]
+binding = "AMAZON_INGESTION_PROVIDER"
+service = "ticketing-amazon-ingestion"
+
+[vars]
+PASSWORD_HASH = "5dc0beb8d36514e3174a936299ee97fefd02feb36fbd7affbbce299da6279164"
+CLOUDFLARE_ACCOUNT_ID = "3c508be87424420345cce942487c298f"
+CLOUDFLARE_KV_NAMESPACE_ID = "14cd3a0ffda249b49e5c5a5d1f939f75"
+# OPENAI_API_KEY — set via: npx wrangler secret put OPENAI_API_KEY
+# DEEPSEEK_API_KEY — set via: npx wrangler secret put DEEPSEEK_API_KEY
+
+# ── New Ticketing MVP (Supabase) ──
+ENABLE_NEW_TICKETING = "true"
+ENABLE_REACT_FRONTEND = "true"
+TICKETFORM_AUTOMATION_MODE = "shadow"
+TICKETFORM_PUBLIC_BASE_URL = "https://tickets.homesbliss.net"
+ENABLE_TICKET_SHARES = "true"
+TICKET_SHARE_PUBLIC_BASE_URL = "https://seller-share.homesbliss.net"
+TICKET_SHARE_BRIDGE_ALLOWED_IPS = "160.251.141.110"
+# ── OrderMgmt webhook forwarding (Issue #131) ──
+# Raw events are forwarded to OrderMgmt's webhook endpoint after durable insert.
+ORDERMGMT_WEBHOOK_ENDPOINT = "https://rp-order-mgmt.jim-yang-3c5.workers.dev/webhooks/mercari-message"
+ORDERMGMT_ORDER_CONTEXT_URL = "https://rp-order-mgmt.jim-yang-3c5.workers.dev"
+SUPABASE_URL = "https://gqeyfhshxdiyhugvmbuk.supabase.co"
+# SUPABASE_SERVICE_ROLE_KEY — set via: npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# SUPABASE_ANON_KEY — set via: npx wrangler secret put SUPABASE_ANON_KEY
+# TICKETFORM_TOKEN_SIGNING_SECRET — set via: npx wrangler secret put TICKETFORM_TOKEN_SIGNING_SECRET
+# TICKET_SHARE_TOKEN_SIGNING_SECRET — set via: npx wrangler secret put TICKET_SHARE_TOKEN_SIGNING_SECRET
+# TICKET_SHARE_BRIDGE_HMAC_SECRET — set via: npx wrangler secret put TICKET_SHARE_BRIDGE_HMAC_SECRET
+# ORDERMGMT_WEBHOOK_FORWARD_SECRET — set via: npx wrangler secret put ORDERMGMT_WEBHOOK_FORWARD_SECRET
+# ORDERMGMT_ORDER_CONTEXT_SECRET — dedicated read-only shared secret
+# ORDERMGMT_WEBHOOK_FORWARD_MAX_ATTEMPTS — optional; defaults to 5
+
+[triggers]
+crons = ["30 2 * * *"]
+
+# Static assets: React frontend build output.
+# run_worker_first + binding let the Worker serve assets under both the legacy
+# /assets/* and the canonical /tickets/assets/* namespace (Issue #60).
+[assets]
+directory = "../frontend/dist"
+binding = "ASSETS"
+run_worker_first = true
+
+# Routes handled via Cloudflare dashboard custom domain on tickets.homesbliss.net

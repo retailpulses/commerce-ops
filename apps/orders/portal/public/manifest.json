@@ -1,0 +1,16 @@
+{
+  "name": "OrderMgmt Portal",
+  "short_name": "Orders",
+  "description": "Order management portal for Retailpulses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1565c0",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

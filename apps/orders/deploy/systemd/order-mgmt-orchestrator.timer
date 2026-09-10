@@ -1,0 +1,12 @@
+[Unit]
+Description=Run OrderMgmt canonical orchestrator shadow hourly
+
+[Timer]
+OnCalendar=*-*-* *:01:00 Asia/Tokyo
+Persistent=true
+RandomizedDelaySec=15
+Unit=order-mgmt-orchestrator.service
+
+[Install]
+WantedBy=timers.target
+

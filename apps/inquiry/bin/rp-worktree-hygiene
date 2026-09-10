@@ -1,0 +1,315 @@
+#!/usr/bin/env bash
+# rp-worktree-hygiene - read-only worktree/session isolation hygiene report.
+#
+# Reports whether the current worktree is safe for a single writable session.
+# Read-only: never removes worktrees, prunes metadata, checks out, resets,
+# cleans, or deletes branches. macOS bash 3.2 compatible.
+#
+# Usage:
+#   bin/rp-worktree-hygiene [path] [--strict] [--base-ref <ref>]
+#
+# Default is informational (always exits 0 when inside a git worktree).
+# --strict exits 1 when a structural violation is found (start/closeout gate).
+set -uo pipefail
+
+STRICT=false
+BASE_REF="${RP_CANONICAL_BASE_REF:-}"
+TARGET="."
+
+usage() {
+  cat <<-USAGE
+Usage: bin/rp-worktree-hygiene [path] [options]
+
+Report worktree/session isolation hygiene for the current (or given) worktree.
+Read-only: no destructive git actions.
+
+Options:
+  --strict          Exit 1 when a structural violation is found (start/closeout gate).
+  --base-ref <ref>  Base ref used for the merged/ahead-behind check.
+                    Default: RP_CANONICAL_BASE_REF, local declaration, then origin/main.
+  --help            Show this help.
+
+Reported conditions: detached HEAD, dirty tree, missing upstream, branch checked
+out in multiple worktrees, use of the primary checkout during concurrent work,
+prunable worktree metadata, merged vs base ref, and the session ownership record.
+USAGE
+}
+
+die() {
+  echo "Error: $*" >&2
+  exit 2
+}
+
+# --- Parse args -----------------------------------------------------------
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h) usage; exit 0 ;;
+    --strict) STRICT=true; shift ;;
+    --base-ref)
+      [[ $# -ge 2 ]] || die "--base-ref requires a value"
+      BASE_REF="$2"
+      shift 2
+      ;;
+    --*) die "Unknown option: $1" ;;
+    *)
+      TARGET="$1"
+      shift
+      ;;
+  esac
+done
+
+[[ -d "$TARGET" ]] || die "path not found or not a directory: $TARGET"
+
+# --- Normalize to the worktree root --------------------------------------
+if ! cd "$TARGET" 2>/dev/null; then
+  die "cannot enter directory: $TARGET"
+fi
+
+toplevel=""
+if ! toplevel="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  die "not a git worktree (or not inside a git repository): $TARGET"
+fi
+cd "$toplevel"
+
+# Resolve the canonical base without evaluating repository-controlled text.
+# CLI wins over environment; environment wins over the local declaration.
+if [[ -z "$BASE_REF" && -f "governance/local.yaml" ]]; then
+  BASE_REF="$(awk '
+    /^worktree_session:[[:space:]]*$/ { in_section=1; next }
+    in_section && /^[^[:space:]#]/ { exit }
+    in_section && /^[[:space:]]+base_ref:[[:space:]]*/ {
+      sub(/^[[:space:]]+base_ref:[[:space:]]*/, "")
+      gsub(/^["'\'' ]+|["'\'' ]+$/, "")
+      print
+      exit
+    }
+  ' governance/local.yaml)"
+fi
+BASE_REF="${BASE_REF:-origin/main}"
+
+# --- Branch / detached -----------------------------------------------------
+branch=""
+detached=false
+if ! branch="$(git symbolic-ref -q --short HEAD 2>/dev/null)"; then
+  detached=true
+fi
+
+# --- Dirty -----------------------------------------------------------------
+dirty=false
+porcelain_status="$(git status --porcelain 2>/dev/null || true)"
+if [[ -n "$porcelain_status" ]]; then
+  dirty=true
+fi
+dirty_tracked="$(git status --porcelain --untracked-files=no 2>/dev/null | wc -l | tr -d '[:space:]')"
+dirty_untracked="$(git status --porcelain --untracked-files=normal 2>/dev/null | grep -c '^??' || true)"
+dirty_untracked="$(printf '%s' "$dirty_untracked" | tr -d '[:space:]')"
+
+# --- Upstream --------------------------------------------------------------
+upstream=""
+has_upstream=false
+if upstream="$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null)"; then
+  has_upstream=true
+fi
+
+# --- Base ref and merged / ahead-behind ------------------------------------
+base_sha="$(git rev-parse --verify "$BASE_REF^{commit}" 2>/dev/null || true)"
+merged="unknown"
+ahead="?"
+behind="?"
+if [[ -n "$base_sha" ]]; then
+  head_sha="$(git rev-parse HEAD 2>/dev/null || true)"
+  if [[ "$head_sha" == "$base_sha" ]]; then
+    merged="at base"
+  elif git merge-base --is-ancestor HEAD "$base_sha" 2>/dev/null; then
+    merged="merged"
+  else
+    merged="not merged"
+  fi
+  counts="$(git rev-list --left-right --count "$base_sha"...HEAD 2>/dev/null || true)"
+  if [[ -n "$counts" ]]; then
+    behind="$(printf '%s' "$counts" | awk '{print $1}')"
+    ahead="$(printf '%s' "$counts" | awk '{print $2}')"
+  fi
+fi
+
+# --- Worktree enumeration --------------------------------------------------
+# Indexed arrays (bash 3.2 compatible; no associative arrays).
+wt_paths=()
+wt_branches=()
+wt_detached=()
+wt_prunable=()
+worktree_total=0
+
+cur_path=""
+cur_branch=""
+cur_detached=false
+cur_prunable=false
+
+while IFS= read -r line; do
+  case "$line" in
+    "worktree "*)
+      if [[ -n "$cur_path" ]]; then
+        worktree_total=$((worktree_total + 1))
+        wt_paths[$worktree_total]="$cur_path"
+        wt_branches[$worktree_total]="$cur_branch"
+        wt_detached[$worktree_total]="$cur_detached"
+        wt_prunable[$worktree_total]="$cur_prunable"
+      fi
+      cur_path="${line#worktree }"
+      cur_branch=""
+      cur_detached=false
+      cur_prunable=false
+      ;;
+    "branch refs/heads/"*)
+      cur_branch="${line#branch refs/heads/}"
+      ;;
+    "detached")
+      cur_detached=true
+      ;;
+    "prunable"*)
+      cur_prunable=true
+      ;;
+  esac
+done < <(git worktree list --porcelain 2>/dev/null)
+
+if [[ -n "$cur_path" ]]; then
+  worktree_total=$((worktree_total + 1))
+  wt_paths[$worktree_total]="$cur_path"
+  wt_branches[$worktree_total]="$cur_branch"
+  wt_detached[$worktree_total]="$cur_detached"
+  wt_prunable[$worktree_total]="$cur_prunable"
+fi
+
+prunable_count=0
+active_worktree_count=0
+checkout_count=0
+for ((i = 1; i <= worktree_total; i++)); do
+  if [[ "${wt_prunable[$i]}" == true ]]; then
+    prunable_count=$((prunable_count + 1))
+  else
+    active_worktree_count=$((active_worktree_count + 1))
+  fi
+  if [[ "$detached" != true && "${wt_branches[$i]}" == "$branch" ]]; then
+    checkout_count=$((checkout_count + 1))
+  fi
+done
+
+# --- Session ownership record ---------------------------------------------
+git_dir="$(git rev-parse --git-dir 2>/dev/null || true)"
+owner_file="$git_dir/rp-session-owner"
+owner_found=false
+owner_issue=""
+owner_branch=""
+owner_session=""
+owner_started=""
+if [[ -f "$owner_file" ]]; then
+  owner_found=true
+  owner_issue="$(grep -E '^issue=' "$owner_file" | head -1 | cut -d= -f2- || true)"
+  owner_branch="$(grep -E '^branch=' "$owner_file" | head -1 | cut -d= -f2- || true)"
+  owner_session="$(grep -E '^session=' "$owner_file" | head -1 | cut -d= -f2- || true)"
+  owner_started="$(grep -E '^started_at=' "$owner_file" | head -1 | cut -d= -f2- || true)"
+fi
+
+# --- Assess violations -----------------------------------------------------
+violations=0
+violation_lines=""
+
+record_violation() {
+  violations=$((violations + 1))
+  violation_lines="${violation_lines}  - $1
+"
+}
+
+if [[ "$detached" == true ]]; then
+  record_violation "detached HEAD (no branch checked out)"
+fi
+if [[ "$dirty" == true ]]; then
+  record_violation "dirty working tree ($dirty_tracked tracked, $dirty_untracked untracked)"
+fi
+if [[ "$has_upstream" != true ]]; then
+  record_violation "branch has no upstream"
+fi
+if [[ "$checkout_count" -gt 1 ]]; then
+  record_violation "branch '$branch' is checked out in $checkout_count worktrees"
+fi
+if [[ "$worktree_total" -gt 0 && "$active_worktree_count" -gt 1 && "${wt_paths[1]}" == "$toplevel" ]]; then
+  record_violation "primary checkout is coordination-only while $active_worktree_count active worktrees exist; use a dedicated linked worktree"
+fi
+if [[ -z "$base_sha" ]]; then
+  record_violation "canonical base '$BASE_REF' cannot be resolved"
+elif [[ "$merged" == "merged" ]]; then
+  record_violation "current branch is already merged into canonical base '$BASE_REF'"
+fi
+
+# --- Report ----------------------------------------------------------------
+echo "=== rp-worktree-hygiene ==="
+printf 'Worktree: %s\n' "$toplevel"
+if [[ "$detached" == true ]]; then
+  echo "Branch: (detached HEAD)"
+else
+  printf 'Branch: %s\n' "$branch"
+fi
+if [[ "$has_upstream" == true ]]; then
+  printf 'Upstream: %s\n' "$upstream"
+else
+  echo "Upstream: (none)"
+fi
+printf 'Base ref: %s\n' "$BASE_REF"
+if [[ "$dirty" == true ]]; then
+  printf 'Dirty: yes (%s tracked, %s untracked)\n' "$dirty_tracked" "$dirty_untracked"
+else
+  echo "Dirty: clean"
+fi
+printf 'Merged into base: %s (ahead %s, behind %s)\n' "$merged" "$ahead" "$behind"
+
+printf 'Worktrees: %s\n' "$worktree_total"
+printf 'Active worktrees: %s\n' "$active_worktree_count"
+for ((i = 1; i <= worktree_total; i++)); do
+  flag=""
+  [[ "${wt_prunable[$i]}" == true ]] && flag=" [prunable]"
+  if [[ "${wt_paths[$i]}" == "$toplevel" ]]; then
+    flag="${flag} [current]"
+  fi
+  if [[ "${wt_detached[$i]}" == true ]]; then
+    printf '  - %s (detached)%s\n' "${wt_paths[$i]}" "$flag"
+  elif [[ -n "${wt_branches[$i]}" ]]; then
+    printf '  - %s (%s)%s\n' "${wt_paths[$i]}" "${wt_branches[$i]}" "$flag"
+  else
+    printf '  - %s%s\n' "${wt_paths[$i]}" "$flag"
+  fi
+done
+
+if [[ "$prunable_count" -gt 0 ]]; then
+  printf 'Prunable worktree metadata: %s (review and prune manually if stale)\n' "$prunable_count"
+else
+  echo "Prunable worktree metadata: 0"
+fi
+
+if [[ "$owner_found" == true ]]; then
+  echo "Session ownership record: found"
+  if [[ -n "$owner_branch" && "$detached" != true && "$owner_branch" != "$branch" ]]; then
+    echo "  status: branch mismatch (ownership review required)"
+  else
+    echo "  status: present (values redacted)"
+  fi
+else
+  echo "Session ownership record: not found (advisory; create at session start)"
+fi
+
+echo ""
+if [[ "$violations" -gt 0 ]]; then
+  echo "Result: VIOLATION(S) FOUND"
+  printf '%s' "$violation_lines"
+else
+  echo "Result: OK"
+fi
+
+# --- Exit codes ------------------------------------------------------------
+if [[ "$STRICT" == true ]]; then
+  if [[ "$violations" -gt 0 ]]; then
+    exit 1
+  fi
+  exit 0
+fi
+
+exit 0

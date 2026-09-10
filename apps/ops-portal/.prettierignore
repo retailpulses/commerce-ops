@@ -1,0 +1,7 @@
+# Dependencies and framework/build output
+node_modules/
+build/
+.svelte-kit/
+.wrangler/
+
+# Generated upstream by inquiry-automation/apps/dashboard

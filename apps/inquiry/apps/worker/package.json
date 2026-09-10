@@ -1,0 +1,21 @@
+{
+  "name": "inquiry-automation-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --test-scheduled",
+    "test": "vitest run --pool forks",
+    "test:cf": "vitest run",
+    "test:watch": "vitest",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.0",
+    "@cloudflare/workers-types": "^4.20250508.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0",
+    "wrangler": "^4.7.0"
+  }
+}

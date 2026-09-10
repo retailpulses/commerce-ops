@@ -1,0 +1,17 @@
+[Unit]
+Description=Multi-Platform Sales Brief — 6x daily (08:00-22:00 JST)
+Requires=order-mgmt-sales-brief.service
+
+[Timer]
+# VPS is JST — use local times directly
+OnCalendar=*-*-* 08:00:00
+OnCalendar=*-*-* 11:00:00
+OnCalendar=*-*-* 14:00:00
+OnCalendar=*-*-* 17:00:00
+OnCalendar=*-*-* 20:00:00
+OnCalendar=*-*-* 22:00:00
+RandomizedDelaySec=30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

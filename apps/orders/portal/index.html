@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1565c0" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>portal</title>
+    <script>
+      (function() {
+        var t = localStorage.getItem("theme");
+        if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <nav aria-label="Operations portals" data-ops-nav-version="1" style="display:flex;align-items:center;gap:6px;min-height:44px;padding:0 12px;background:#0f172a;color:#fff;font:600 14px system-ui,sans-serif">
+      <strong style="margin-right:6px">Ops</strong>
+      <a href="/inquiry/" style="color:#dbeafe;padding:6px 10px;text-decoration:none">Inquiry</a>
+      <a href="/tickets/" style="color:#dbeafe;padding:6px 10px;text-decoration:none">Tickets</a>
+      <a href="/order/" aria-current="page" style="color:#fff;background:#2563eb;border-radius:6px;padding:6px 10px;text-decoration:none">Order</a>
+    </nav>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

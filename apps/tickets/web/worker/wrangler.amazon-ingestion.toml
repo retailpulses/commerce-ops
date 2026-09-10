@@ -1,0 +1,24 @@
+name = "ticketing-amazon-ingestion"
+main = "src/runtimes/amazonIngestionWorker.ts"
+compatibility_date = "2024-01-01"
+workers_dev = false
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[vars]
+SUPABASE_URL = "https://gqeyfhshxdiyhugvmbuk.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_pi5R7vlrNcuuLM-OEi9xEA_S_-JgZCz"
+ZOHO_ACCOUNTS_BASE = "https://accounts.zoho.com"
+ZOHO_MAIL_API_BASE = "https://mail.zoho.com/api"
+AMAZON_MAIL_FROM_ADDRESS = "amazon@retailpulses.com"
+AMAZON_PLATFORM_ACCOUNT_ID = "8aaa0e95-91a4-45ce-aba0-f3ff0ce9480f"
+AMAZON_MAIL_INGESTION_MODE = "off"
+AMAZON_MAIL_ATTACHMENTS_ENABLED = "false"
+AMAZON_MAIL_OVERLAP_MINUTES = "15"
+AMAZON_MAIL_RECONCILIATION_LIMIT = "25"
+AMAZON_MAIL_INITIAL_LOOKBACK_HOURS = "24"
+PLATFORM_SCHEMA_READY = "false"
+RUNTIME_CONTRACT_VERSION = "2026-09-09.v1"
+
+[triggers]
+crons = ["*/5 * * * *"]

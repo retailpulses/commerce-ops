@@ -1,0 +1,4 @@
+# Merge this entry before the terminal http_status rule in /root/.cloudflared/config.yml.
+# TLS and Cloudflare Access remain at the Cloudflare edge.
+- hostname: ops.homesbliss.net
+  service: http://127.0.0.1:8090

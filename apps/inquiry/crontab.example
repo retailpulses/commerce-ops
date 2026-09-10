@@ -1,0 +1,7 @@
+# Inquiry pipeline — runs classify → draft → queue every 30 minutes
+# Install with: crontab crontab.example
+# Or add to existing crontab: crontab -l | cat - crontab.example | crontab
+
+PROJECT_DIR=/Users/user/Documents/Retailpulses/20_REPOS/inquiry-automation
+
+*/30 * * * * cd $PROJECT_DIR && ./scripts/cron_pipeline.sh

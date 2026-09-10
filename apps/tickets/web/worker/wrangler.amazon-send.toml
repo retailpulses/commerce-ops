@@ -1,0 +1,12 @@
+name = "ticketing-amazon-send"
+main = "src/runtimes/amazonSendWorker.ts"
+compatibility_date = "2024-01-01"
+workers_dev = false
+[version_metadata]
+binding = "CF_VERSION_METADATA"
+
+[vars]
+SUPABASE_URL = "https://gqeyfhshxdiyhugvmbuk.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_pi5R7vlrNcuuLM-OEi9xEA_S_-JgZCz"
+PLATFORM_SCHEMA_READY = "false"
+RUNTIME_CONTRACT_VERSION = "2026-09-09.v1"

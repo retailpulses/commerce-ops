@@ -1,0 +1,27 @@
+{
+  "name": "ops-portal",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test gateway/*.test.mjs",
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:eslint": "eslint .",
+    "lint": "npm run format:check && npm run lint:eslint"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.8",
+    "@sveltejs/kit": "^2.20.8",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "eslint": "^9.26.0",
+    "eslint-plugin-svelte": "^3.5.1",
+    "prettier": "^3.5.3",
+    "prettier-plugin-svelte": "^3.3.3",
+    "svelte": "^5.28.2",
+    "vite": "^6.3.5"
+  }
+}

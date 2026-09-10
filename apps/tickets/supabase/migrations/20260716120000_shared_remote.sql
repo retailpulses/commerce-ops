@@ -1,0 +1,14 @@
+-- Domain: order_management
+-- Owner: retailpulses/OrderMgmt
+-- Affected: ingest fields extension for order processing
+-- Change class: additive
+-- Hosted write required: no
+-- Consumers: retailpulses/ticket-handling
+--
+-- Shared hosted-history alignment artifact.
+-- Canonical migration:
+-- retailpulses/OrderMgmt/supabase/migrations/20260716120000_add_ingest_fields.sql
+-- Reconciliation: retailpulses/RPagentOS#32
+--
+-- Applied to the shared hosted Supabase project.
+-- This file intentionally contains no executable SQL.

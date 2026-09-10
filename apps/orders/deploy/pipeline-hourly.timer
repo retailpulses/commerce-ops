@@ -1,0 +1,23 @@
+# OrderMgmt Pipeline — hourly core cycle
+#
+# Runs CORE_PHASES (pull_shop_orders + build_giga_shipments + push_orders_to_giga)
+# every hour at :01 past the hour.
+#
+# Installation:
+#   sudo cp deploy/pipeline-hourly.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pipeline-hourly.timer
+
+[Unit]
+Description=OrderMgmt hourly core pipeline (CORE_PHASES)
+Documentation=https://github.com/retailpulses/OrderMgmt
+After=network.target
+Wants=network.target
+
+[Timer]
+OnCalendar=*-*-* *:01:00
+Persistent=true
+RandomizedDelaySec=5
+
+[Install]
+WantedBy=timers.target

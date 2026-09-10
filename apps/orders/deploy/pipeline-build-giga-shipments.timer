@@ -1,0 +1,35 @@
+# TRANSITIONAL: per-platform timer. Will be consolidated in Phase B
+# (channel-stage timers). See issue TBD.
+#
+# build_giga_shipments — every 10 min Mercari sales→Giga shipment projection.
+#
+# SCHEDULE CHANGE from Worker cron:
+#   Worker: :03,13,23,33,43,53 (6 runs/hr, bundled with sync_mercari_messages
+#           + auto_approve_orders in same cron)
+#   VPS:    :12,22,32,42,52 (5 runs/hr, standalone)
+#
+# Rationale: Moved from :03 to :12 (9 min later) so auto_approve_orders (:04)
+# has time to complete before shipments are projected. The 5/hr frequency
+# (vs 6/hr on Worker) is a deliberate reduction — one fewer run per hour
+# with a 10-minute gap at the :02 mark avoided to stay clear of the
+# pull_rakuten_orders (:02) window.
+#
+# Ordering note: push_orders_to_giga at :06 now runs BEFORE build_giga_shipments
+# at :12 within the same 10-min window. The push at :06 picks up shipments
+# built at the previous cycle's :52 run. Idempotent — safe.
+#
+# Phase: build_giga_shipments  Kind: projection / internal_write  Risk: Medium
+
+[Unit]
+Description=OrderMgmt — build_giga_shipments (shipment projection)
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Timer]
+Unit=pipeline-scheduler@build_giga_shipments.service
+OnCalendar=*-*-* *:12,22,32,42,52:00
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

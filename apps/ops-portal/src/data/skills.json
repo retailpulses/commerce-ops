@@ -1,0 +1,488 @@
+[
+  {
+    "id": "1688-sourcing",
+    "name": "1688-sourcing",
+    "level": "account",
+    "description": "1688 image-based product matching — Find similar products on 1688 via image search",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/1688-sourcing/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/1688-sourcing/SKILL.md"
+    ],
+    "capabilityDomains": ["sourcing"]
+  },
+  {
+    "id": "ab-test-setup",
+    "name": "ab-test-setup",
+    "level": "account",
+    "description": "Plan, design, or implement an A/B test or experiment",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/ab-test-setup/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/ab-test-setup/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "accio-mcp-cli",
+    "name": "accio-mcp-cli",
+    "level": "agent",
+    "description": "Discover, search, and invoke MCP tools via the Accio Work gateway",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/accio-mcp-cli/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/accio-mcp-cli/SKILL.md"
+    ],
+    "capabilityDomains": ["communication"]
+  },
+  {
+    "id": "amazon-inventory-flatfile",
+    "name": "amazon-inventory-flatfile",
+    "level": "account",
+    "description": "Update Amazon listing inventory in Baserow, generate Amazon Price and Quantity flat files from the official template",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/amazon-inventory-flatfile/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/amazon-inventory-flatfile/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/amazon-inventory-flatfile/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:amazon"]
+  },
+  {
+    "id": "amazon-listing-expert",
+    "name": "amazon-listing-expert",
+    "level": "account",
+    "description": "Creates and optimizes Amazon product listings following proven high-conversion templates",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/amazon-listing-expert/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/amazon-listing-expert/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:amazon"]
+  },
+  {
+    "id": "amz-product-optimizer",
+    "name": "amz-product-optimizer",
+    "level": "account",
+    "description": "Amazon product optimization end-to-end automation — hot keyword analysis to product detail image generation",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/amz-product-optimizer/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/amz-product-optimizer/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:amazon"]
+  },
+  {
+    "id": "baserow-database-manager",
+    "name": "baserow-database-manager",
+    "level": "account",
+    "description": "Standalone Baserow API skill for reading data, writing records, creating tables, and modifying schema with resilient, token-saving operations",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/baserow-database-manager/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/baserow-database-manager/SKILL.md",
+      "retailpulses-agent-skills/skills/agent/baserow-database-manager/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/baserow-database-manager/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/baserow-database-manager/SKILL.md"
+    ],
+    "capabilityDomains": ["data:baserow"]
+  },
+  {
+    "id": "baserow-schema-editor",
+    "name": "baserow-schema-editor",
+    "level": "account",
+    "description": "Edit Baserow schema by adding, renaming, or deleting fields after reading live schema",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/baserow-schema-editor/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/baserow-schema-editor/SKILL.md",
+      "retailpulses-agent-skills/skills/agent/baserow-schema-editor/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/baserow-schema-editor/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/baserow-schema-editor/SKILL.md"
+    ],
+    "capabilityDomains": ["data:baserow"]
+  },
+  {
+    "id": "copywriting",
+    "name": "copywriting",
+    "level": "account",
+    "description": "Write, rewrite, or improve marketing copy for any page",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/copywriting/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/copywriting/SKILL.md"
+    ],
+    "capabilityDomains": ["content"]
+  },
+  {
+    "id": "cross-border-selection",
+    "name": "cross-border-selection",
+    "level": "account",
+    "description": "Cross-border e-commerce product selection workflow — scrape product data from platforms like Amazon and save as local files",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/cross-border-selection/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/cross-border-selection/SKILL.md"
+    ],
+    "capabilityDomains": ["sourcing"]
+  },
+  {
+    "id": "docx",
+    "name": "docx",
+    "level": "agent",
+    "description": "Comprehensive document creation, editing, and analysis with tracked changes, comments, formatting preservation",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/docx/SKILL.md",
+    "workspacePaths": ["agent-core/repos/retailpulses-agent-skills/skills/agent/docx/SKILL.md"],
+    "capabilityDomains": ["office"]
+  },
+  {
+    "id": "find-skills",
+    "name": "find-skills",
+    "level": "account",
+    "description": "Helps users discover and install agent skills",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/find-skills/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/find-skills/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "giga-resource-pack-copywriting",
+    "name": "giga-resource-pack-copywriting",
+    "level": "account",
+    "description": "Generate Japanese Rakuten, Amazon, and Mercari copy from a Giga Item Code by looking up the resource pack in Baserow",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/giga-resource-pack-copywriting/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/giga-resource-pack-copywriting/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/giga-resource-pack-copywriting/SKILL.md"
+    ],
+    "capabilityDomains": ["content"]
+  },
+  {
+    "id": "gigab2b-api-access",
+    "name": "gigab2b-api-access",
+    "level": "account",
+    "description": "Signed OpenAPI 2.0 skill for GigaB2B product, price, saved-products, and shipping queries using client-id/client-secret signing",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/gigab2b-api-access/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/gigab2b-api-access/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/gigab2b-api-access/SKILL.md"
+    ],
+    "capabilityDomains": ["sourcing"]
+  },
+  {
+    "id": "gigab2b-workflow",
+    "name": "gigab2b-workflow",
+    "level": "account",
+    "description": "Combined skill for GigaB2B API query access and sync workflow to Baserow table 886994",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/gigab2b-workflow/SKILL.md",
+    "workspacePaths": [],
+    "capabilityDomains": ["sourcing"]
+  },
+  {
+    "id": "gmail-assistant",
+    "name": "gmail-assistant",
+    "level": "agent",
+    "description": "Send, search, and manage Gmail messages with automatic delivery verification and smart draft workflow",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/gmail-assistant/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/gmail-assistant/SKILL.md"
+    ],
+    "capabilityDomains": ["communication"]
+  },
+  {
+    "id": "higgsfield-guide",
+    "name": "higgsfield-guide",
+    "level": "account",
+    "description": "Generate images and videos using Higgsfield AI platform via accio-mcp-cli",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/higgsfield-guide/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/higgsfield-guide/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "invoice-receipt-automation",
+    "name": "invoice-receipt-automation",
+    "level": "account",
+    "description": "Review and execute Homebliss or Mercari invoice, receipt, and batch workflows from exported request files",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/invoice-receipt-automation/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/invoice-receipt-automation/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/invoice-receipt-automation/SKILL.md"
+    ],
+    "capabilityDomains": ["ops"]
+  },
+  {
+    "id": "jp-payroll-assistant",
+    "name": "jp-payroll-assistant",
+    "level": "agent",
+    "description": "Prepare monthly Japanese payroll slips (給与明細) in Baserow",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/jp-payroll-assistant/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/jp-payroll-assistant/SKILL.md"
+    ],
+    "capabilityDomains": ["jp"]
+  },
+  {
+    "id": "mercari-category-id",
+    "name": "mercari-category-id",
+    "level": "account",
+    "description": "Populate Mercari category IDs in Baserow Products by matching category master data against Product Name",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/mercari-category-id/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/mercari-category-id/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/mercari-category-id/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:mercari"]
+  },
+  {
+    "id": "mercari-csv-listing",
+    "name": "mercari-csv-listing",
+    "level": "account",
+    "description": "Build a Mercari listing CSV from Item Codes or a GigaB2B Excel file",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/mercari-csv-listing/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/mercari-csv-listing/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/mercari-csv-listing/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:mercari"]
+  },
+  {
+    "id": "mercari-settlement-pdf",
+    "name": "mercari-settlement-pdf",
+    "level": "agent",
+    "description": "Generate a Mercari settlement PDF (売上金精算書) for a given set of months, amounts, and a settlement number",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/mercari-settlement-pdf/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/mercari-settlement-pdf/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:mercari"]
+  },
+  {
+    "id": "mercari-shop-api-specialist",
+    "name": "mercari-shop-api-specialist",
+    "level": "account",
+    "description": "Handle Mercari Shop API work from the Conoha VPS fixed IPv4 path using SSH and curl",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/mercari-shop-api-specialist/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/mercari-shop-api-specialist/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/mercari-shop-api-specialist/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:mercari"]
+  },
+  {
+    "id": "mercari-ticket-mgmt-hourly",
+    "name": "mercari-ticket-mgmt-hourly",
+    "level": "account",
+    "description": "Process one Mercari Shop unread transaction-message batch on demand and classify messages",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/mercari-ticket-mgmt-hourly/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/mercari-ticket-mgmt-hourly/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/mercari-ticket-mgmt-hourly/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:mercari"]
+  },
+  {
+    "id": "mercari-timesale-csv",
+    "name": "mercari-timesale-csv",
+    "level": "account",
+    "description": "Build Mercari Shops timesale CSV files from Baserow timesale scope with live Mercari API enrichment",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/mercari-timesale-csv/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/mercari-timesale-csv/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/mercari-timesale-csv/SKILL.md"
+    ],
+    "capabilityDomains": ["marketplace:mercari"]
+  },
+  {
+    "id": "pdf",
+    "name": "pdf",
+    "level": "agent",
+    "description": "Comprehensive PDF manipulation toolkit for extracting text and tables, creating new PDFs, merging/splitting documents",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/pdf/SKILL.md",
+    "workspacePaths": ["agent-core/repos/retailpulses-agent-skills/skills/agent/pdf/SKILL.md"],
+    "capabilityDomains": ["office"]
+  },
+  {
+    "id": "pptx",
+    "name": "pptx",
+    "level": "agent",
+    "description": "Presentation creation, editing, and analysis",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/pptx/SKILL.md",
+    "workspacePaths": ["agent-core/repos/retailpulses-agent-skills/skills/agent/pptx/SKILL.md"],
+    "capabilityDomains": ["office"]
+  },
+  {
+    "id": "rakuten-resource-pack-images",
+    "name": "rakuten-resource-pack-images",
+    "level": "account",
+    "description": "Generate Rakuten main-image fail-fast batch with per-item image/layout/QA files",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/rakuten-resource-pack-images/SKILL.md",
+    "workspacePaths": [],
+    "capabilityDomains": ["marketplace:rakuten"]
+  },
+  {
+    "id": "seo-keyword-research",
+    "name": "seo-keyword-research",
+    "level": "account",
+    "description": "Discover high-value keywords, classify search intent, and build topic clusters to drive organic traffic and AI visibility",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/seo-keyword-research/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/seo-keyword-research/SKILL.md"
+    ],
+    "capabilityDomains": ["content"]
+  },
+  {
+    "id": "self-improvement",
+    "name": "self-improvement",
+    "level": "agent",
+    "description": "Captures learnings, errors, corrections, and self-reflections into daily diary for continuous improvement",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/self-improvement/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/self-improvement/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "skill-creator",
+    "name": "skill-creator",
+    "level": "agent",
+    "description": "Create new skills, modify and improve existing skills, and measure skill performance",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/skill-creator/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/skill-creator/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "skill-finder",
+    "name": "skill-finder",
+    "level": "agent",
+    "description": "Find, search, recommend, and install agent skills from the internal catalog, skills.sh, ClawHub, and SkillsMP",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/skill-finder/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/skill-finder/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "skill-writer",
+    "name": "skill-writer",
+    "level": "account",
+    "description": "Guide users through creating Agent Skills for the agent development environment",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/account/skill-writer/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/account/skill-writer/SKILL.md"
+    ],
+    "capabilityDomains": ["agent:misc"]
+  },
+  {
+    "id": "sync-giga-saved-products",
+    "name": "sync-giga-saved-products",
+    "level": "account",
+    "description": "Sync GigaB2B saved products into Baserow table 886994 from explicit Item Codes or last 30 days of newly saved products",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/sync-giga-saved-products/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/account/sync-giga-saved-products/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/account/sync-giga-saved-products/SKILL.md"
+    ],
+    "capabilityDomains": ["sourcing"]
+  },
+  {
+    "id": "xlsx",
+    "name": "xlsx",
+    "level": "agent",
+    "description": "Comprehensive spreadsheet creation, editing, and analysis with support for formulas, formatting, data analysis, and visualization",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/xlsx/SKILL.md",
+    "workspacePaths": ["agent-core/repos/retailpulses-agent-skills/skills/agent/xlsx/SKILL.md"],
+    "capabilityDomains": ["office"]
+  },
+  {
+    "id": "zoho-mail-access",
+    "name": "zoho-mail-access",
+    "level": "agent",
+    "description": "Standalone Zoho Mail access skill for refreshing local OAuth credentials, searching messages by subject or keywords",
+    "installed": false,
+    "sourceType": "workspace_primary",
+    "sourcePath": "retailpulses-agent-skills/skills/agent/zoho-mail-access/SKILL.md",
+    "workspacePaths": [
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/zoho-mail-access/SKILL.md"
+    ],
+    "capabilityDomains": ["communication"]
+  },
+  {
+    "id": "zoho-mail-handler",
+    "name": "zoho-mail-handler",
+    "level": "account",
+    "description": "Use for Zoho Mail REST API work: search emails, fetch email content by messageId, and draft/preview/send replies",
+    "installed": true,
+    "sourceType": "local_codex",
+    "sourcePath": "/Users/user/.codex/skills/zoho-mail-handler/SKILL.md",
+    "workspacePaths": [
+      "retailpulses-agent-skills/skills/agent/zoho-mail-handler/SKILL.md",
+      "agent-core/repos/retailpulses-agent-skills/skills/agent/zoho-mail-handler/SKILL.md"
+    ],
+    "capabilityDomains": ["communication"]
+  }
+]

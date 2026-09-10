@@ -1,0 +1,14 @@
+-- Domain: product_catalog
+-- Owner: retailpulses/RPagentOS
+-- Affected: catalogsync_mercari_shops_1_3_reader
+-- Change class: additive
+-- Hosted write required: no
+-- Consumers: retailpulses/ticket-handling
+--
+-- Shared hosted-history alignment artifact.
+-- Canonical migration:
+-- retailpulses/RPagentOS/supabase/migrations/20260717100000_catalogsync_mercari_shops_1_3_reader.sql
+-- Reconciliation: retailpulses/RPagentOS#32
+--
+-- Applied to the shared hosted Supabase project.
+-- This file intentionally contains no executable SQL.
