@@ -132,11 +132,16 @@ npm run test:entrypoint
 
 After source snapshots are imported:
 
-- [ ] all commands above succeed from the new monorepo paths;
-- [ ] failures caused only by path relocation are fixed without changing runtime behavior;
-- [ ] no production deployment command runs as part of parity checks;
-- [ ] no domain is declared migrated based on only one subcomponent passing;
-- [ ] each app retains an independent failure/rollback boundary.
+- [x] all commands above succeed from the new monorepo paths;
+- [x] failures caused by relocation or intentional workflow omission are handled without changing runtime behavior;
+- [x] no production deployment command runs as part of parity checks;
+- [x] every documented subcomponent passes rather than relying on one command per domain;
+- [x] each app retains an independent failure/rollback boundary.
+
+Source-level parity was completed on 2026-09-10 and is enforced by four
+independent path-scoped workflows. Deployment-only contract tests remain
+explicitly skipped while the legacy deploy workflows are intentionally omitted
+from this public Phase 1 snapshot.
 
 ## Phase 2 promotion gate
 

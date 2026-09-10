@@ -27,6 +27,11 @@ Shared packages are intentionally deferred until production parity is proven and
 
 Phase 0: complete — GO decision recorded in `retailpulses/inbox#100`.
 
-Phase 1: in progress — target repo bootstrapped; source-tree import and path-scoped CI migration follow.
+Phase 1 source consolidation: complete — all four sanitized source trees, exact
+provenance, monorepo-path parity, and independent path-scoped CI are on `main`.
+
+Phase 2 production-source cutover: not started. The four legacy repositories
+remain the deployment/runtime authority until each production surface passes
+the secret/environment, exact-SHA deploy, smoke, and rollback gates.
 
 See `docs/MIGRATION.md` for the migration plan and acceptance criteria.
