@@ -2,6 +2,12 @@
 
 Status: Proposed for review; no staging resources have been provisioned
 
+Local evidence: [`LOCAL_STAGING_POC.md`](LOCAL_STAGING_POC.md) proves the
+disposable Inquiry database lifecycle with synthetic data. It also confirms
+that a hosted/shared replay still needs an owner-approved cross-repository
+migration assembly order; Inquiry migrations consume RPagentOS catalog objects
+that are not canonicalized in this repository.
+
 Tracking issue: [`commerce-ops#6`](https://github.com/retailpulses/commerce-ops/issues/6)
 
 Prerequisite: [`commerce-ops#13`](https://github.com/retailpulses/commerce-ops/issues/13)
@@ -81,6 +87,12 @@ Database migrations must be applied from reviewed repository migrations in a
 deterministic order. Seed data must be synthetic, idempotent, and disposable.
 The environment must have a documented reset operation that cannot resolve to
 the production project.
+
+The deterministic order cannot be inferred by globally sorting the current app
+directories. Orders and Tickets contain real timestamp collisions, Tickets
+retains mixed migration-history forms, and Inquiry depends on RPagentOS-owned
+catalog migrations. Stage 1 must therefore record the owner migration source,
+cross-repository assembly order, and collision handling before hosted replay.
 
 ### External integration boundary
 

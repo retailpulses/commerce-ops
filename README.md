@@ -35,3 +35,17 @@ remain the deployment/runtime authority until each production surface passes
 the secret/environment, exact-SHA deploy, smoke, and rollback gates.
 
 See `docs/MIGRATION.md` for the migration plan and acceptance criteria.
+
+## Disposable local Inquiry environment
+
+With Docker Desktop running and Supabase CLI installed:
+
+```bash
+LOCAL_ENV_ALLOW_WILDCARD_BINDINGS=1 make local-env-start # after firewall/network isolation
+make local-env-reset
+make local-env-destroy
+```
+
+This uses only synthetic data and local Docker resources. See
+[`docs/LOCAL_STAGING_POC.md`](docs/LOCAL_STAGING_POC.md) for safety boundaries,
+migration ownership gaps, measurements, and the full command set.
