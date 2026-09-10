@@ -3,6 +3,7 @@ import type { Env } from "../src/env";
 
 const mocks = vi.hoisted(() => ({
   runDailyAudit: vi.fn(),
+  runMasterHandler: vi.fn(),
   getWebhookStatus: vi.fn(),
   persistence: {
     getWebhookStatus: (...args: unknown[]) => mocks.getWebhookStatus(...args),
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../src/mercari/audit", () => ({ runDailyAudit: mocks.runDailyAudit }));
+vi.mock("../src/jobs/master-handler", () => ({ runMasterHandler: mocks.runMasterHandler }));
 vi.mock("../src/mercari/persistence", () => ({
   createMercariPersistence: () => mocks.persistence,
 }));
@@ -83,6 +85,35 @@ beforeEach(() => {
         attempts: 1,
       },
     ],
+  });
+  mocks.runMasterHandler.mockResolvedValue({});
+});
+
+describe("scheduled completeness recovery", () => {
+  it("runs a bounded two-page audit for every shop each hour", async () => {
+    const waitUntil = vi.fn();
+    const ctx = {
+      ...executionContext,
+      waitUntil,
+    } as unknown as ExecutionContext;
+
+    await worker.scheduled(
+      { cron: "15 * * * *" } as ScheduledController,
+      env({ INQUIRY_COMPLETENESS_AUDIT_WRITES_ENABLED: "true" }),
+      ctx,
+    );
+    expect(waitUntil).toHaveBeenCalledOnce();
+    await waitUntil.mock.calls[0][0];
+
+    expect(mocks.runDailyAudit).toHaveBeenCalledTimes(4);
+    for (const shopKey of ["shop1", "shop2", "shop3", "shop4"]) {
+      expect(mocks.runDailyAudit).toHaveBeenCalledWith(
+        shopKey,
+        { auditWritesEnabled: true, maxDiscoveryPages: 2 },
+        mocks.persistence,
+        mocks.relay,
+      );
+    }
   });
 });
 

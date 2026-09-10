@@ -21,6 +21,7 @@ export interface RelayInquiry {
   salesChannel: string | null;
   firstOpenedAt: string | null;
   lastActivityAt: string | null;
+  userInfo: { nickname: string | null } | null;
   target: RelayInquiryTarget | null;
 }
 
@@ -39,7 +40,7 @@ const INQUIRY_FIELDS = `id status salesChannel firstOpenedAt lastActivityAt targ
   ... on InquiryProductTarget { productId productVariantId }
   ... on InquiryShopTarget { shopId }
   ... on InquiryOrderTransactionTarget { orderTransaction { id } }
-}`;
+} userInfo { nickname }`;
 const MESSAGE_FIELDS = `id inquiryId body from sentAt status`;
 
 interface MessageNode { id?: string; body?: string; sentAt?: string; from?: string; status?: string }
@@ -67,12 +68,19 @@ function normalizeInquiry(value: unknown): RelayInquiry | null {
   if (value === null || typeof value !== "object") return null;
   const v = value as Record<string, unknown>;
   if (typeof v.id !== "string") return null;
+  const userInfo =
+    v.userInfo !== null && typeof v.userInfo === "object"
+      ? (v.userInfo as Record<string, unknown>)
+      : null;
   return {
     id: v.id,
     status: typeof v.status === "string" ? v.status : null,
     salesChannel: typeof v.salesChannel === "string" ? v.salesChannel : null,
     firstOpenedAt: typeof v.firstOpenedAt === "string" ? v.firstOpenedAt : null,
     lastActivityAt: typeof v.lastActivityAt === "string" ? v.lastActivityAt : null,
+    userInfo: userInfo
+      ? { nickname: typeof userInfo.nickname === "string" ? userInfo.nickname : null }
+      : null,
     target: normalizeTarget(v.target),
   };
 }

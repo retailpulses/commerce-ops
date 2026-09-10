@@ -504,6 +504,31 @@ async function handleMercariProcess(env: Env): Promise<Response> {
   });
 }
 
+async function runAllShopAudits(
+  env: Env,
+  options: { maxDiscoveryPages?: number } = {},
+): Promise<void> {
+  const config = getConfig(env);
+  for (const shopKey of MERCARI_SHOP_KEYS) {
+    try {
+      await runDailyAudit(
+        shopKey,
+        {
+          auditWritesEnabled: config.mercari.auditWritesEnabled,
+          ...options,
+        },
+        createMercariPersistence(config.supabase),
+        createMercariRelay({
+          url: config.mercari.relayUrl,
+          shopTokens: config.mercari.shopTokens,
+        }),
+      );
+    } catch (err) {
+      console.log(`Completeness audit failed for ${shopKey}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+}
+
 export default {
   async scheduled(
     controller: ScheduledController,
@@ -521,30 +546,17 @@ export default {
         ctx.waitUntil(runMasterHandler(env, { dryRun: false }).then(() => undefined));
         break;
       }
+      case "15 * * * *": {
+        // Bounded recovery path for prolonged webhook-delivery gaps. The full
+        // daily audit remains the final completeness boundary; this hourly run
+        // only inspects the newest two discovery pages per shop.
+        ctx.waitUntil(runAllShopAudits(env, { maxDiscoveryPages: 2 }));
+        break;
+      }
       case "0 16 * * *": {
         // Daily completeness audit (01:00 JST). Runs even when the master-handler
         // write switch is off; it is gated by its own audit write kill switch.
-        ctx.waitUntil(
-          (async () => {
-            for (const shopKey of MERCARI_SHOP_KEYS) {
-              try {
-                const persistence = createMercariPersistence(config.supabase);
-                const transport = createMercariRelay({
-                  url: config.mercari.relayUrl,
-                  shopTokens: config.mercari.shopTokens,
-                });
-                await runDailyAudit(
-                  shopKey,
-                  { auditWritesEnabled: config.mercari.auditWritesEnabled },
-                  persistence,
-                  transport,
-                );
-              } catch (err) {
-                console.log(`Daily audit failed for ${shopKey}: ${err instanceof Error ? err.message : String(err)}`);
-              }
-            }
-          })().then(() => undefined),
-        );
+        ctx.waitUntil(runAllShopAudits(env));
         break;
       }
       default:

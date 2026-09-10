@@ -20,6 +20,7 @@ describe("mapInquiry", () => {
         salesChannel: "mercari",
         firstOpenedAt: "2026-09-01T00:00:00Z",
         lastActivityAt: "2026-09-02T00:00:00Z",
+        userInfo: { nickname: "購入前のお客様" },
         target: {
           __typename: "InquiryProductTarget",
           productId: "p1",
@@ -36,7 +37,17 @@ describe("mapInquiry", () => {
     expect(out.external_target_type).toBe("InquiryProductTarget");
     expect(out.external_product_id).toBe("p1");
     expect(out.external_product_variant_id).toBe("v1");
+    expect(out.customer_nickname).toBe("購入前のお客様");
     expect(out.source).toBe("mercari_shops");
+  });
+
+  it("normalizes a missing buyer nickname without inventing a fallback", async () => {
+    const out = await mapInquiry(
+      { id: "inq-2", userInfo: null },
+      "shop1",
+      "daily_audit",
+    );
+    expect(out.customer_nickname).toBeNull();
   });
 });
 

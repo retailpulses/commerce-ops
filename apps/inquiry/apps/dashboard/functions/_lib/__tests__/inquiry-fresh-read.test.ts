@@ -14,6 +14,7 @@ function relay(overrides: Partial<MercariRelayClient> = {}): MercariRelayClient 
       salesChannel: "MERCARI_SHOPS",
       firstOpenedAt: "2026-09-01T00:00:00Z",
       lastActivityAt: "2026-09-02T00:00:00Z",
+      userInfo: { nickname: "購入前のお客様" },
       target: {
         __typename: "InquiryProductTarget",
         productId: "product-1",
@@ -59,7 +60,11 @@ describe("Mercari inquiry detail fresh read", () => {
     expect(mercari.inquiryMessagesPage).toHaveBeenNthCalledWith(1, "shop1", "inq-1", { first: 50, after: null });
     expect(mercari.inquiryMessagesPage).toHaveBeenNthCalledWith(2, "shop1", "inq-1", { first: 50, after: "cursor-1" });
     expect(rpc).toHaveBeenCalledWith("inquiry_reconcile_api_thread", expect.objectContaining({
-      p_inquiry: expect.objectContaining({ external_inquiry_id: "inq-1", external_target_type: "InquiryProductTarget" }),
+      p_inquiry: expect.objectContaining({
+        external_inquiry_id: "inq-1",
+        external_target_type: "InquiryProductTarget",
+        customer_nickname: "購入前のお客様",
+      }),
       p_messages: expect.arrayContaining([
         expect.objectContaining({ external_message_id: "message-1", direction: "inbound" }),
         expect.objectContaining({ external_message_id: "message-2", direction: "outbound" }),
@@ -89,6 +94,7 @@ describe("Mercari inquiry detail fresh read", () => {
         salesChannel: "MERCARI_SHOPS",
         firstOpenedAt: null,
         lastActivityAt: null,
+        userInfo: null,
         target: {
           __typename: "InquiryOrderTransactionTarget",
           productId: null,

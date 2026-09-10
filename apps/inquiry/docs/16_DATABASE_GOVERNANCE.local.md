@@ -54,7 +54,7 @@ inventory is [`SYNC_JOB_INVENTORY.md`](SYNC_JOB_INVENTORY.md).
 | `inquiry_dashboard_mutations` | interactive writes | high for new-path rollout | operator | PostgREST, write-scoped Pages Function | `INQUIRY_DASHBOARD_MUTATIONS_ENABLED` |
 | `inquiry_vps_enrichment` | sync | high | bounded manual/scheduler | PostgREST, write-scoped | `INQUIRY_ENRICHMENT_WRITES_ENABLED` + SIGTERM |
 | `inquiry_mercari_webhook_ingestion` | pull / internal write | medium | Mercari webhook + bounded async processor | Cloudflare Worker → PostgREST; Mercari readback via fixed-egress relay | `INQUIRY_MERCARI_INGEST_WRITES_ENABLED` |
-| `inquiry_mercari_daily_completeness_audit` | reconcile / internal write | medium | daily `0 16 * * *` UTC | Cloudflare Worker → Mercari relay + PostgREST | `INQUIRY_COMPLETENESS_AUDIT_WRITES_ENABLED` |
+| `inquiry_mercari_completeness_audit` | reconcile / internal write | medium | hourly recent 2-page recovery + daily full `0 16 * * *` UTC | Cloudflare Worker → Mercari relay + PostgREST | `INQUIRY_COMPLETENESS_AUDIT_WRITES_ENABLED` |
 | `inquiry_operator_send` | push / external write | high | authenticated operator click | Pages Function → Mercari relay + atomic PostgREST RPC | `INQUIRY_OUTBOUND_SEND_ENABLED` |
 
 The API-first workloads are implemented locally but remain inactive until the schema,
