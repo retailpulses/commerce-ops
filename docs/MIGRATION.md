@@ -62,7 +62,7 @@ Allowed cleanup:
 - exclude local IDE/agent/tool state that is not required by runtime or governance;
 - exclude secrets, credentials, `.env` files, PII, private logs, and production payload dumps;
 - remove code only when it is provably dead and removal cannot affect current runtime behavior;
-- classify legacy Baserow material according to `docs/BASE_ROW_RETIREMENT.md`.
+- classify legacy Baserow material according to `docs/BASEROW_RETIREMENT.md`.
 
 Deferred until after parity/staging:
 
@@ -86,6 +86,46 @@ All workflows should scope to their application root to avoid GitHub Actions amp
 
 Production deploy targets and rollback semantics remain unchanged until Phase 2 parity is proven.
 
+## Secret and environment migration gate
+
+Secret migration is a separate gate from source import. Do not enable production deployment workflows in `commerce-ops` until the inventory and mapping below is complete.
+
+### Repository-scoped GitHub configuration
+
+Inventory and recreate where required:
+
+- repository Actions secrets referenced by each migrated workflow;
+- GitHub Environments (for example `production`) and their protection rules;
+- environment-scoped secrets and variables;
+- repository variables such as production URLs;
+- organization-level secrets/variables whose selected-repository access must be extended to `commerce-ops`;
+- workflow permissions and any GitHub App/deployment permissions tied to the source repository identity.
+
+GitHub secret values are write-only and must never be copied into this repository or migration documentation. Values must be re-seeded from their approved source.
+
+### Runtime-scoped secrets that should stay in place initially
+
+Because Phase 1/2 preserves runtime identities, do not rotate or relocate these merely because source control moves:
+
+- Cloudflare Worker/Pages secrets attached to existing production projects;
+- protected VPS `.env` files and systemd/runtime environment values;
+- marketplace/provider credentials already stored at the runtime boundary;
+- webhook/shared secrets already provisioned to unchanged endpoints.
+
+Only the deployment credential needed for `commerce-ops` to reach those existing runtimes should be recreated at the GitHub layer.
+
+### Supabase/runtime principals
+
+Preserve existing least-privilege runtime principals. Do not collapse app/platform-specific runtime keys into one monorepo-wide super-key. Any GitHub-hosted deploy/runtime keys must be mapped to the corresponding app/workflow and re-seeded without exposing values.
+
+### Public-repository safeguard
+
+While `commerce-ops` is public:
+
+- no real secret value may appear in tracked files, examples, workflow defaults, test fixtures, logs, or migration notes;
+- production deployment workflows should remain disabled/manual-only until the secret inventory and environment protections are complete;
+- source import must not trigger deployment as a side effect.
+
 ## Phase 1 Definition of Done
 
 - [x] Target repository exists and write access is verified.
@@ -93,6 +133,7 @@ Production deploy targets and rollback semantics remain unchanged until Phase 2 
 - [x] Zero-runtime-change invariant is documented.
 - [x] Public-repository/private-source import safety rule is documented.
 - [x] Baserow legacy classification is defined across Orders, Tickets, and Inquiry.
+- [x] Secret/environment migration strategy and deployment gate are documented.
 - [ ] Sanitized current-tree snapshot of Ops Portal imported under `apps/ops-portal`.
 - [ ] Sanitized current-tree snapshot of Inquiry imported under `apps/inquiry`.
 - [ ] Sanitized current-tree snapshot of Orders imported under `apps/orders`.
@@ -100,11 +141,13 @@ Production deploy targets and rollback semantics remain unchanged until Phase 2 
 - [ ] Source revision/provenance recorded for each imported app.
 - [ ] Existing builds/tests pass from new paths.
 - [ ] Path-scoped CI checks are installed without changing production deploy targets.
-- [ ] Required repository environments/secrets/permissions are inventoried for later cutover; no secrets are committed.
+- [ ] Required GitHub repository secrets/variables/environments/permissions are inventoried and mapped to source ownership; no secret values are documented.
+- [ ] Runtime-scoped secret locations (Cloudflare/VPS/provider) are confirmed unchanged for initial cutover.
+- [ ] Production deployment workflows remain disabled/manual-only until the secret/environment gate is complete.
 - [ ] Old repositories remain active and unarchived.
 
 ## Phase 2 gate
 
-Do not start production ownership cutover until every imported app can build/test from `commerce-ops` and the source-to-target provenance is recorded.
+Do not start production ownership cutover until every imported app can build/test from `commerce-ops`, source-to-target provenance is recorded, and the secret/environment migration gate is complete.
 
 Staging remains after source consolidation and production-source parity, as defined in the program issue.
