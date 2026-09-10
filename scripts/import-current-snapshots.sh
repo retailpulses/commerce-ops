@@ -93,7 +93,7 @@ sync_one() {
 # refresh provenance rather than silently importing a different tree.
 sync_one "ops-portal" "retailpulses/ops-portal" "6740e9a6116ce3d4d9bd9980caa78538ad02bb97"
 sync_one "inquiry" "retailpulses/inquiry-automation" "e02ba5f2b81ff67252d2a22a41ec0b0e42464b75"
-sync_one "orders" "retailpulses/OrderMgmt" "66008ae6d7394746459649c20ed123e391c9dff8"
+sync_one "orders" "retailpulses/OrderMgmt" "f3789ca5ca27f8a23b0b6db09c82c0579c3d6702"
 sync_one "tickets" "retailpulses/ticket-handling" "7434487ad33e3b3d2d0b89ba9e8c3da054c07ec6"
 
 echo "==> Safety scan"
