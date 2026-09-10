@@ -46,6 +46,9 @@ export interface MercariInquiry {
   salesChannel?: string | null;
   firstOpenedAt?: string | null;
   lastActivityAt?: string | null;
+  userInfo?: {
+    nickname?: string | null;
+  } | null;
   target?: MercariTarget | null;
 }
 

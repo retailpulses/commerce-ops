@@ -28,7 +28,7 @@ const INQUIRY_FIELDS = `id status salesChannel firstOpenedAt lastActivityAt targ
   ... on InquiryProductTarget { productId productVariantId }
   ... on InquiryShopTarget { shopId }
   ... on InquiryOrderTransactionTarget { orderTransaction { id status } }
-}`;
+} userInfo { nickname }`;
 const MESSAGE_FIELDS = `id inquiryId body from sentAt status attachments { __typename }`;
 
 async function runGraphQL(config: MercariRelayConfig, shopKey: string, query: string, variables: Record<string, unknown>): Promise<Record<string, unknown>> {

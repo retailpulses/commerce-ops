@@ -69,7 +69,7 @@ export async function mapInquiry(
     source_payload: toJson(inquiry),
     inquiry_date: firstOpenedAt,
     inquiry_body: latestBuyerMessage?.body ?? null,
-    customer_nickname: null,
+    customer_nickname: nullable(inquiry.userInfo?.nickname),
     last_inbound_time: toIso(latestBuyerMessage?.sentAt ?? null),
     last_custom_message: latestBuyerMessage?.body ?? null,
   };

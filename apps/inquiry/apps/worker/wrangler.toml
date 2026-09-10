@@ -19,7 +19,7 @@ tag = "v1"
 new_sqlite_classes = ["JobStateDO"]
 
 [triggers]
-crons = ["*/30 * * * *", "0 16 * * *"]
+crons = ["*/30 * * * *", "15 * * * *", "0 16 * * *"]
 
 [vars]
 # ---- Supabase (active, Phase 1) ----

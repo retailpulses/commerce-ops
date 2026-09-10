@@ -56,7 +56,7 @@ ingest
 1. Mercari Shops Inquiry API 是 platform inquiry/message/target/status 的权威来源。
 2. Supabase `inquiry_management` 是业务主数据。
 3. 三个 inquiry topic webhook 是唯一低延迟 change trigger：message-created、resolved、admin-deleted。
-4. 每日一次 bounded completeness audit 初始回看 72 小时；它只修复 missing/changed delta，不是第二条实时 reader，窗口须由 Phase 0 延迟证据验证。
+4. Webhook freshness 失效时由每小时 bounded recent audit（每店最多 2 discovery pages）缩短恢复窗口；每日一次 full completeness audit 继续回看 72 小时。两者都只修复 missing/changed delta，不拥有第二套写入合同。
 5. Operator 打开详情和点击 Send 前，按单 thread fresh read。
 6. 新版直接发布到 canonical `/inquiry/`，不运行双 UI。
 7. API ingestor 与旧 mail writer 不得在同一 ownership epoch 并行写 canonical inquiry。
@@ -80,7 +80,7 @@ Mercari Shops
   |-- Inquiry GraphQL reads/writes
           <-> ConoHa relay, fixed IPv4 160.251.141.110
 
-Daily completeness audit
+Hourly bounded recovery + daily completeness audit
   -> bounded Mercari Inquiry API scan per shop
   -> bulk compare inquiry status + message IDs/hashes/status
   -> persist missing/changed delta only
@@ -104,7 +104,7 @@ Cloudflare Worker/Pages Functions 是 application boundary。ConoHa relay 只负
 | Inquiry webhook receiver | 验证、幂等持久化 raw event、快速返回 2xx | 不执行 LLM、product link 或 outbound send 后才确认 receipt |
 | Async processor | API readback、normalize、route、canonical persistence、retry | 所有 trigger 共用同一 processing contract |
 | Target router | 区分 presales inquiry 与 post-order ticket | 不把 order target 写入 inquiry cohort |
-| Daily completeness audit | 发现 webhook 漏投并补 missing delta | 每日一次；无变化不写业务行 |
+| Completeness audit | 发现 webhook 漏投并补 missing delta | 每小时 recent 2-page recovery + 每日 full 72-hour audit；无变化不写业务行 |
 | Mercari relay | 固定 IPv4 GraphQL transport | 无业务 ownership、无持久化事实 |
 | Inquiry Portal/API | Operator review、compose、Send、schedule、queue | Frontend 不接触 privileged credentials |
 | Send/finalize service | Fresh read、idempotent mutation、readback、atomic finalize | Operator Send 的唯一 outbound writer |
@@ -138,9 +138,10 @@ unknown target
     -> quarantine
 ```
 
-### 6.3 Daily completeness audit
+### 6.3 Bounded recovery and daily completeness audit
 
-- 每日、每店一次 bounded discovery，回看 72 小时；
+- 每小时、每店执行最多 2 discovery pages 的 recent recovery，限制 webhook 故障窗口；
+- 每日、每店执行 full bounded discovery，回看 72 小时；
 - cursor pagination，不使用 unbounded/offset scan；
 - 批量读取现有 inquiry status 与 external message ID/hash/status；
 - 对 missing message、status change、message edit/admin-delete 写 delta；
