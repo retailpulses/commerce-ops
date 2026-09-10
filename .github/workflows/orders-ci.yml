@@ -1,0 +1,43 @@
+name: Orders CI
+
+on:
+  pull_request:
+    paths:
+      - apps/orders/**
+      - .github/workflows/orders-ci.yml
+  push:
+    branches: [main]
+    paths:
+      - apps/orders/**
+      - .github/workflows/orders-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orders-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/orders/package-lock.json
+            apps/orders/portal/package-lock.json
+            apps/orders/portal-api/package-lock.json
+      - name: Runtime parity
+        working-directory: apps/orders
+        run: npm ci && npm test && npm run build && npm run check
+      - name: Portal parity
+        working-directory: apps/orders/portal
+        run: npm ci && npm test && npm run lint && npm run build
+      - name: Portal API parity
+        working-directory: apps/orders/portal-api
+        run: npm ci && npm test && npm run check
