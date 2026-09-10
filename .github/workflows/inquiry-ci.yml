@@ -1,0 +1,49 @@
+name: Inquiry CI
+
+on:
+  pull_request:
+    paths:
+      - apps/inquiry/**
+      - .github/workflows/inquiry-ci.yml
+  push:
+    branches: [main]
+    paths:
+      - apps/inquiry/**
+      - .github/workflows/inquiry-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inquiry-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/inquiry/apps/dashboard/package-lock.json
+            apps/inquiry/apps/worker/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: apps/inquiry/requirements.txt
+      - name: Dashboard parity
+        working-directory: apps/inquiry/apps/dashboard
+        run: npm ci && npm run typecheck && npm test && npm run build
+      - name: Worker parity
+        working-directory: apps/inquiry/apps/worker
+        run: npm ci && npm test
+      - name: Python parity
+        working-directory: apps/inquiry
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pytest

@@ -49,7 +49,7 @@ The Worker deploy command is deliberately excluded from parity validation.
 
 ```bash
 cd apps/inquiry
-python -m pytest
+python3 -m pytest
 ```
 
 The repository `pyproject.toml` declares `tests/` as the pytest test path.
@@ -124,8 +124,8 @@ cd apps/tickets/web/share-viewer
 npm ci
 npm run typecheck
 npm test
-npm run test:entrypoint
 npm run build
+npm run test:entrypoint
 ```
 
 ## Phase 1 acceptance

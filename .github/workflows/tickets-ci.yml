@@ -1,0 +1,43 @@
+name: Tickets CI
+
+on:
+  pull_request:
+    paths:
+      - apps/tickets/**
+      - .github/workflows/tickets-ci.yml
+  push:
+    branches: [main]
+    paths:
+      - apps/tickets/**
+      - .github/workflows/tickets-ci.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tickets-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/tickets/web/frontend/package-lock.json
+            apps/tickets/web/worker/package-lock.json
+            apps/tickets/web/share-viewer/package-lock.json
+      - name: Frontend parity
+        working-directory: apps/tickets/web/frontend
+        run: npm ci && npm run typecheck && npm run lint && npm run build
+      - name: Worker parity
+        working-directory: apps/tickets/web/worker
+        run: npm ci && npm run typecheck && npm test && npm run build
+      - name: Share viewer parity
+        working-directory: apps/tickets/web/share-viewer
+        run: npm ci && npm run typecheck && npm test && npm run build && npm run test:entrypoint
