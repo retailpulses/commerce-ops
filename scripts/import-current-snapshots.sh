@@ -116,15 +116,22 @@ while IFS= read -r f; do
   esac
 done < <(find "$ROOT/apps" -type f -name '.env*' -print)
 
-# Fail on obvious high-risk credential material. This is intentionally
-# conservative and supplements, not replaces, human review. Use standard
-# macOS tools rather than requiring ripgrep.
-SECRET_PATTERN='(-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{24,}|eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,})'
-if find "$ROOT/apps" -type f \
-    ! -name '.env.example' \
-    ! -name '.env.sample' \
-    -print0 | xargs -0 grep -nE "$SECRET_PATTERN"; then
-  echo "ERROR: possible credential material detected; inspect before commit." >&2
+# Fail on obvious high-risk credential material. Never print matching secret
+# text: failures report paths only, so terminal output is safe to paste into a
+# review thread or chat.
+SECRET_PATTERN='(-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{24,}|sbp_[A-Za-z0-9_-]{20,}|sb_secret_[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,})'
+secret_hit=0
+while IFS= read -r -d '' f; do
+  if grep -qE "$SECRET_PATTERN" "$f" 2>/dev/null; then
+    echo "  possible credential: ${f#$ROOT/}" >&2
+    secret_hit=1
+  fi
+done < <(find "$ROOT/apps" -type f \
+  ! -name '.env.example' \
+  ! -name '.env.sample' \
+  -print0)
+if [[ "$secret_hit" -ne 0 ]]; then
+  echo "ERROR: possible credential material detected; inspect source before commit." >&2
   exit 1
 fi
 
@@ -133,12 +140,19 @@ fi
 # not re-add it. Stale root operating docs are explicitly removed above.
 BASEROW_PATTERN='(api\.baserow\.io|BASEROW_(API_)?TOKEN|BASEROW_DATABASE_TOKEN)'
 for app in inquiry tickets; do
-  if find "$ROOT/apps/$app" -type f \
-      ! -name '*.md' \
-      ! -path '*/docs/*' \
-      ! -path '*/supabase/migrations/*' \
-      ! -path '*test*' \
-      -print0 | xargs -0 grep -nE "$BASEROW_PATTERN"; then
+  baserow_hit=0
+  while IFS= read -r -d '' f; do
+    if grep -qE "$BASEROW_PATTERN" "$f" 2>/dev/null; then
+      echo "  active Baserow reference: ${f#$ROOT/}" >&2
+      baserow_hit=1
+    fi
+  done < <(find "$ROOT/apps/$app" -type f \
+    ! -name '*.md' \
+    ! -path '*/docs/*' \
+    ! -path '*/supabase/migrations/*' \
+    ! -path '*test*' \
+    -print0)
+  if [[ "$baserow_hit" -ne 0 ]]; then
     echo "ERROR: active Baserow runtime reference detected in $app." >&2
     exit 1
   fi
@@ -147,5 +161,5 @@ done
 echo
 printf '%s\n' \
   'Snapshot import prepared successfully.' \
-  'Review `git status` and `git diff --stat` before committing.' \
+  'Run `bash scripts/verify-import-snapshot.sh` before committing.' \
   'Do not add deployment workflows or production secrets in this change.'
