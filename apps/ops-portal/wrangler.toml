@@ -1,0 +1,5 @@
+# Wrangler configuration for local development
+# Cloudflare Pages Functions
+name = "ops-portal"
+compatibility_date = "2026-04-08"
+pages_build_output_dir = "build"

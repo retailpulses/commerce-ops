@@ -1,0 +1,21 @@
+# TRANSITIONAL: per-platform timer. Will be consolidated in Phase B
+# (channel-stage timers). See issue TBD.
+#
+# confirm_rakuten_orders — every 10 min Rakuten RMS order confirmation.
+# Runs at the same minute as auto_approve_orders (:04) but with a randomized
+# 5-second delay to smooth resource usage (different channels, different locks).
+# Phase: confirm_rakuten_orders  Kind: push / external_write  Risk: High
+
+[Unit]
+Description=OrderMgmt — confirm_rakuten_orders (RMS confirm)
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Timer]
+Unit=pipeline-scheduler@confirm_rakuten_orders.service
+OnCalendar=*-*-* *:04,14,24,34,44,54:00
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=5
+
+[Install]
+WantedBy=timers.target

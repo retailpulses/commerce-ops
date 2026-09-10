@@ -1,0 +1,22 @@
+name = "rp-order-mgmt-reporting"
+main = "src/index.js"
+compatibility_date = "2026-07-16"
+account_id = "3c508be87424420345cce942487c298f"
+
+workers_dev = false
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[vars]
+WORKER_ENV = "prod"
+
+[[triggers]]
+crons = ["0 23,2,5,8,11,13 * * *"]

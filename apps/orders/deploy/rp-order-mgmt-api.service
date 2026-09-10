@@ -1,0 +1,53 @@
+[Unit]
+Description=OrderMgmt Portal API Server
+After=network.target
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Service]
+Type=simple
+User=root
+# Canonical immutable-release layout (Issue 60):
+#   /opt/order-mgmt/current  ->  /opt/order-mgmt/releases/<sha>
+# Repoint the symlink and restart to deploy or roll back.
+WorkingDirectory=/opt/order-mgmt/current
+ExecStart=/usr/bin/node /opt/order-mgmt/current/portal-api/src/server.mjs
+Restart=on-failure
+RestartSec=5
+
+# Secrets live OUTSIDE the repo/releases, in a protected env file.
+# Create /opt/order-mgmt/.env with at minimum:
+#   SUPABASE_SERVICE_ROLE_KEY=<real-key>
+#   SUPABASE_ANON_KEY=<real-key>
+#   ORDER_MGMT_ADMIN_SECRET=<real-secret>
+#   GIGA_SYNC_ADMIN_SECRET=<real-secret>
+#   BASEROW_DATABASE_TOKEN=<real-token>  # Products master enrichment only
+#   MERCARI_RELAY_SECRET=<real-secret>   # Must match rp-order-mgmt-relay
+#   ORDERMGMT_CATALOG_API_TOKEN=<real-token>
+# deploy-api.yml injects RELEASE_SHA and RELEASE_BUILT_AT here at deploy time.
+EnvironmentFile=/opt/order-mgmt/.env
+
+# Non-secret configuration (safe to commit)
+Environment=DATABASE_BACKEND=supabase
+Environment=SUPABASE_PROJECT_URL=https://gqeyfhshxdiyhugvmbuk.supabase.co
+Environment=PORT=8790
+Environment=HOST=0.0.0.0
+Environment=NODE_ENV=production
+
+# External services
+Environment=MERCARI_RUNNER_BASE_URL=https://worker-order.homesbliss.net
+Environment=GIGA_API_BASE_URL=https://openapi.gigab2b.com
+
+# LLM (AI reply generation)
+Environment=LLM_MODEL=gpt-4o
+Environment=LLM_MAX_TOKENS=500
+
+# Portal config
+Environment=PORTAL_COMMISSION_RATE_MERCARI=0.10
+Environment=PORTAL_PRODUCTS_TABLE_ID=886994
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

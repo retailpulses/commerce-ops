@@ -1,0 +1,22 @@
+# TRANSITIONAL: per-platform timer. Will be consolidated in Phase B
+# (channel-stage timers). See issue TBD.
+#
+# auto_approve_orders — every 10 min Mercari auto-approval.
+# NOTE: Un-bundled from Worker cron :03 slot (previously ran alongside
+# sync_mercari_messages + build_giga_shipments). Now at :04 to avoid
+# simultaneous execution with confirm_rakuten_orders.
+# Phase: auto_approve_orders  Kind: projection / internal_write  Risk: Medium
+
+[Unit]
+Description=OrderMgmt — auto_approve_orders (Mercari approval rules)
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Timer]
+Unit=pipeline-scheduler@auto_approve_orders.service
+OnCalendar=*-*-* *:04,14,24,34,44,54:00
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

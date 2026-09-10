@@ -1,0 +1,50 @@
+# Repository Governance Declaration
+# =================================
+# Template for business-repo governance/local.yaml
+#
+# This is the minimal local governance declaration for a Retailpulses repository.
+# Everything else — ownership, capabilities, access policy, invariants,
+# incident response — comes from the central governance repo.
+#
+# See: https://github.com/retailpulses/rp-governance-kit
+
+governance_version: "12056e83066536fff6804209f049f6de4b107081"
+
+references:
+  database:
+    owner: retailpulses/rp-governance-kit
+
+# Domains this repository OWNS (has migrations for)
+# Must match DATABASE_OWNERSHIP.yaml in rp-governance-kit
+domains_owned:
+  # - ticketing
+
+# Domains this repository CONSUMES (reads from)
+# Must match DATABASE_CAPABILITIES.yaml in rp-governance-kit
+domains_consumed:
+  # - product_catalog
+
+# Workloads this repository hosts
+# Each workload must have a corresponding entry in
+# DATABASE_WORKLOADS.yaml before production activation
+workloads:
+  # - example_workload_id
+
+# Repository-specific constraints (stricter than central, if any)
+# These must not weaken central invariants
+constraints:
+  service_role_forbidden: true
+  # database_writes_forbidden: true
+  # allowed_access_paths: [postgrest]
+
+# Worktree / session isolation (stricter local rules, if any).
+# Central invariants are defined in WORKTREE_AND_SESSION_GOVERNANCE.md
+# in retailpulses/rp-governance-kit. This section must not weaken them.
+worktree_session:
+  base_ref: origin/main
+  # one_writable_session: true          # implied by central policy
+  # require_ownership_record: true      # stricter: block start without rp-session-owner
+  # require_merged_before_cleanup: true # stricter: block worktree removal unless merged
+
+# Notes: free-text repository-specific context
+notes: ""

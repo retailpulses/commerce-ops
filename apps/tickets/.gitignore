@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+.env.production
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Artifacts
+*.jsonl
+*_txn_log.jsonl
+Archive/
+
+# Reports / outputs
+reports/
+outputs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node / Worker
+node_modules/
+.wrangler/
+dist/
+
+# Temp files
+.tmp/
+
+# macOS
+.DS_Store

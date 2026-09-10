@@ -1,0 +1,21 @@
+[Unit]
+Description=OrderMgmt canonical orchestrator (shadow by default)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=rp-ordermgmt
+Group=rp-ordermgmt
+WorkingDirectory=/opt/order-mgmt-orchestrator/current
+EnvironmentFile=/etc/ordermgmt/pipeline.env
+ExecStart=/usr/bin/node /opt/order-mgmt-orchestrator/current/src/orchestrator.mjs
+TimeoutStartSec=35min
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal

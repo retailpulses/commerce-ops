@@ -1,0 +1,11 @@
+{
+  "name": "rp-order-mgmt-relay",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "ConoHa VPS relay for Mercari API access over fixed IPv4",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "license": "UNLICENSED"
+}

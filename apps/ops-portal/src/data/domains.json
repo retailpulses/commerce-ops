@@ -1,0 +1,147 @@
+[
+  {
+    "id": "marketplace:mercari",
+    "label": "Mercari Marketplace Operations",
+    "description": "Listing, CSV, API, tickets, timesales, category management on Mercari Shops",
+    "iconHint": "shopping-bag",
+    "repoIds": ["mercariops", "boutique-listing"],
+    "skillIds": [
+      "mercari-csv-listing",
+      "mercari-shop-api-specialist",
+      "mercari-ticket-mgmt-hourly",
+      "mercari-timesale-csv",
+      "mercari-category-id",
+      "mercari-settlement-pdf"
+    ],
+    "relatedDomainIds": ["sourcing", "content"]
+  },
+  {
+    "id": "marketplace:rakuten",
+    "label": "Rakuten Marketplace Operations",
+    "description": "Rakuten listing, activation, pricing, CSV generation, image preparation",
+    "iconHint": "globe",
+    "repoIds": ["rakutenops"],
+    "skillIds": ["rakuten-resource-pack-images"],
+    "relatedDomainIds": ["content"]
+  },
+  {
+    "id": "marketplace:amazon",
+    "label": "Amazon Marketplace Operations",
+    "description": "Amazon listing sync, pricing, inventory flatfiles, listing optimization, product optimization",
+    "iconHint": "shopping-cart",
+    "repoIds": ["amazonops"],
+    "skillIds": ["amazon-inventory-flatfile", "amazon-listing-expert", "amz-product-optimizer"],
+    "relatedDomainIds": ["sourcing", "content"]
+  },
+  {
+    "id": "sourcing",
+    "label": "Product Sourcing & GigaB2B",
+    "description": "1688 image matching, GigaB2B API access, product sync, cross-border selection research",
+    "iconHint": "search",
+    "repoIds": [],
+    "skillIds": [
+      "1688-sourcing",
+      "gigab2b-api-access",
+      "gigab2b-workflow",
+      "sync-giga-saved-products",
+      "cross-border-selection"
+    ],
+    "relatedDomainIds": ["marketplace:mercari", "marketplace:amazon"]
+  },
+  {
+    "id": "data:baserow",
+    "label": "Baserow Data Operations",
+    "description": "CRUD, schema management, table creation, field editing for Baserow databases",
+    "iconHint": "database",
+    "repoIds": [],
+    "skillIds": ["baserow-database-manager", "baserow-schema-editor"],
+    "relatedDomainIds": ["ops"]
+  },
+  {
+    "id": "content",
+    "label": "Content & Copywriting",
+    "description": "Marketing copy, resource pack copy generation for multiple platforms, SEO keyword research",
+    "iconHint": "edit",
+    "repoIds": [],
+    "skillIds": ["giga-resource-pack-copywriting", "copywriting", "seo-keyword-research"],
+    "relatedDomainIds": ["marketplace:mercari", "marketplace:amazon", "marketplace:rakuten"]
+  },
+  {
+    "id": "agent:misc",
+    "label": "Agent Tooling & Meta-Capabilities",
+    "description": "Skill creation, skill discovery, self-improvement, A/B testing, image/video generation, skill writing",
+    "iconHint": "code",
+    "repoIds": [],
+    "skillIds": [
+      "skill-creator",
+      "skill-finder",
+      "skill-writer",
+      "self-improvement",
+      "find-skills",
+      "ab-test-setup",
+      "higgsfield-guide"
+    ],
+    "relatedDomainIds": ["ops"]
+  },
+  {
+    "id": "office",
+    "label": "Office Document Processing",
+    "description": "Word documents, PDFs, presentations, spreadsheets",
+    "iconHint": "file-text",
+    "repoIds": [],
+    "skillIds": ["docx", "pdf", "pptx", "xlsx"],
+    "relatedDomainIds": []
+  },
+  {
+    "id": "communication",
+    "label": "Communication Channels",
+    "description": "Zoho Mail, Gmail, Accio MCP CLI, ticket handling, inbox management",
+    "iconHint": "message-circle",
+    "repoIds": ["ticket-handling", "inbox"],
+    "skillIds": ["zoho-mail-handler", "zoho-mail-access", "gmail-assistant", "accio-mcp-cli"],
+    "relatedDomainIds": ["inquiry"]
+  },
+  {
+    "id": "ops",
+    "label": "Operations & Infrastructure",
+    "description": "Backoffice, Cloudflare Workers, governance, tool services, Archon, homepage, invoice automation",
+    "iconHint": "settings",
+    "repoIds": [
+      "backoffice",
+      ".github",
+      "workers",
+      "retailpulses-tool-services",
+      "Archon",
+      "homepage"
+    ],
+    "skillIds": ["invoice-receipt-automation"],
+    "relatedDomainIds": ["data:baserow", "agent:misc"]
+  },
+  {
+    "id": "catalog",
+    "label": "Catalog Management",
+    "description": "Product catalog sync and order management",
+    "iconHint": "package",
+    "repoIds": ["CatalogSync", "OrderMgmt"],
+    "skillIds": [],
+    "relatedDomainIds": ["marketplace:mercari", "marketplace:amazon"]
+  },
+  {
+    "id": "inquiry",
+    "label": "Inquiry Automation",
+    "description": "Customer inquiry automation runtime",
+    "iconHint": "help-circle",
+    "repoIds": ["inquiry-automation"],
+    "skillIds": [],
+    "relatedDomainIds": ["communication"]
+  },
+  {
+    "id": "jp",
+    "label": "Japan Operations",
+    "description": "Japanese payroll preparation and compliance",
+    "iconHint": "flag",
+    "repoIds": [],
+    "skillIds": ["jp-payroll-assistant"],
+    "relatedDomainIds": ["ops"]
+  }
+]

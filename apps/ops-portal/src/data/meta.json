@@ -1,0 +1,20 @@
+{
+  "portalVersion": "0.1.0",
+  "seedDeliverable": "Deliverables/2026-06-12_ops_portal_inventory_plan",
+  "seedFile": "repo-skill-seed.json",
+  "generatedAt": "2026-06-12T00:00:00Z",
+  "lastManualUpdate": "2026-06-12",
+  "dedupeSummary": {
+    "totalRepos": 15,
+    "totalSkills": 37,
+    "totalDomains": 13,
+    "installedSkills": 14,
+    "workspaceOnlySkills": 23
+  },
+  "sources": [
+    "Deliverables/2026-06-12_github_repo_inventory/retailpulses_active_repos.csv",
+    "/Users/user/.codex/skills/",
+    "retailpulses-agent-skills/skills/{account,agent}/",
+    "agent-core/repos/retailpulses-agent-skills/skills/{account,agent}/"
+  ]
+}

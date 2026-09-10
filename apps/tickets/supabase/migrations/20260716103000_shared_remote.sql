@@ -1,0 +1,14 @@
+-- Domain: product_catalog
+-- Owner: retailpulses/RPagentOS
+-- Affected: catalogsync_shop4_read_projection
+-- Change class: additive
+-- Hosted write required: no
+-- Consumers: retailpulses/ticket-handling
+--
+-- Shared hosted-history alignment artifact.
+-- Canonical migration:
+-- retailpulses/RPagentOS/supabase/migrations/20260716103000_catalogsync_shop4_read_projection.sql
+-- Reconciliation: retailpulses/RPagentOS#32
+--
+-- Applied to the shared hosted Supabase project.
+-- This file intentionally contains no executable SQL.

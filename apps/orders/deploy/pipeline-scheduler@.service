@@ -1,0 +1,42 @@
+# OrderMgmt Pipeline Scheduler — template unit
+#
+# TRANSITIONAL: per-platform timer service. Will be consolidated in Phase B
+# (channel-stage timers with lifecycle adapter registry).
+#
+# Instance parameter %i is the pipeline phase name.
+# Timer files trigger individual instances via Unit=pipeline-scheduler@<phase>.service.
+#
+# Enable a timer (Phase 3b cutover — all timers installed disabled in Phase 3a):
+#   systemctl enable --now pipeline-pull-shop-orders.timer
+#
+# Run one-off:
+#   systemctl start pipeline-scheduler@pull_shop_orders.service
+#
+# Logs:
+#   journalctl -u pipeline-scheduler@pull_shop_orders.service --since "5 min ago"
+
+[Unit]
+Description=OrderMgmt Pipeline — %i
+Documentation=https://github.com/retailpulses/OrderMgmt
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=rp-ordermgmt
+Group=rp-ordermgmt
+WorkingDirectory=/opt/OrderMgmt
+EnvironmentFile=/etc/ordermgmt/pipeline.env
+ExecStart=/usr/bin/flock --wait 540 /run/lock/ordermgmt-%i.lock /usr/bin/node /opt/OrderMgmt/vps/pipeline-scheduler.mjs --mode %i
+TimeoutStartSec=9min
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

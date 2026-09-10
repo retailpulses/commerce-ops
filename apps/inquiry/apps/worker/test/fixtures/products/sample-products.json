@@ -1,0 +1,67 @@
+[
+  {
+    "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+    "item_code": "BIKESHED2",
+    "sku": "BIKESHED2",
+    "variant_name": "自転車倉庫 2台用 物置 屋外 スチール 防水 大型",
+    "stock_qty": 0,
+    "assembly_status": null,
+    "restock_date": "2026-07-15",
+    "Product Name": "自転車倉庫 2台用 物置 屋外 スチール 防水 大型",
+    "item code": "BIKESHED2",
+    "Mercari Qty": 0,
+    "Restock date": "2026-07-15"
+  },
+  {
+    "id": "c2d3e4f5-a6b7-8901-cdef-234567890123",
+    "item_code": "TABLE-NAT-120",
+    "sku": "TABLE-NAT-120",
+    "variant_name": "ナチュラル ダイニングテーブル 120cm 4人掛け",
+    "stock_qty": 3,
+    "assembly_status": null,
+    "restock_date": null,
+    "Product Name": "ナチュラル ダイニングテーブル 120cm 4人掛け",
+    "item code": "TABLE-NAT-120",
+    "Mercari Qty": 3,
+    "Restock date": null
+  },
+  {
+    "id": "d3e4f5a6-b7c8-9012-defa-345678901234",
+    "item_code": "CHAIR-BLK-4SET",
+    "sku": "CHAIR-BLK-4SET",
+    "variant_name": "ダイニングチェア ブラック 4脚セット 木脚",
+    "stock_qty": 5,
+    "assembly_status": null,
+    "restock_date": null,
+    "Product Name": "ダイニングチェア ブラック 4脚セット 木脚",
+    "item code": "CHAIR-BLK-4SET",
+    "Mercari Qty": 5,
+    "Restock date": null
+  },
+  {
+    "id": "e4f5a6b7-c8d9-0123-efab-456789012345",
+    "item_code": "CHAIR-BLK-1",
+    "sku": "CHAIR-BLK-1",
+    "variant_name": "ダイニングチェア ブラック 1脚 スチール脚",
+    "stock_qty": 10,
+    "assembly_status": null,
+    "restock_date": null,
+    "Product Name": "ダイニングチェア ブラック 1脚 スチール脚",
+    "item code": "CHAIR-BLK-1",
+    "Mercari Qty": 10,
+    "Restock date": null
+  },
+  {
+    "id": "f5a6b7c8-d9e0-1234-fabc-567890123456",
+    "item_code": "SOFA-GRY-3",
+    "sku": "SOFA-GRY-3",
+    "variant_name": "ソファー 3人掛け グレー ファブリック",
+    "stock_qty": 0,
+    "assembly_status": null,
+    "restock_date": null,
+    "Product Name": "ソファー 3人掛け グレー ファブリック",
+    "item code": "SOFA-GRY-3",
+    "Mercari Qty": 0,
+    "Restock date": null
+  }
+]

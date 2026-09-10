@@ -1,0 +1,26 @@
+# OrderMgmt Pipeline — tracking sync
+#
+# Pulls tracking from GigaB2B and patches Baserow rows, then closes
+# shipped orders on Mercari via the VPS relay.
+#
+# Runs every 10 minutes at :08, :18, :28, :38, :48, :58.
+# (Matches the Worker's pull_giga_tracking cron schedule.)
+#
+# Installation:
+#   sudo cp deploy/pipeline-sync.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pipeline-sync.timer
+
+[Unit]
+Description=OrderMgmt tracking sync (pull_giga_tracking)
+Documentation=https://github.com/retailpulses/OrderMgmt
+After=network.target
+Wants=network.target
+
+[Timer]
+OnCalendar=*-*-* *:08,18,28,38,48,58:00
+Persistent=true
+RandomizedDelaySec=3
+
+[Install]
+WantedBy=timers.target

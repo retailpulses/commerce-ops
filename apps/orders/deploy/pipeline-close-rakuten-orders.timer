@@ -1,0 +1,24 @@
+# TRANSITIONAL: per-platform timer. Will be consolidated in Phase B
+# (channel-stage timers). See issue TBD.
+#
+# SAFETY: RMS close endpoint/payload remain unverified.
+# This timer is intentionally disabled. Do not enable until the RMS close
+# API contract is confirmed through manual dry-run testing.
+#
+# close_rakuten_orders — Rakuten RMS order close (DISABLED).
+# Phase: close_rakuten_orders  Kind: push / external_write  Risk: High (unverified)
+
+[Unit]
+Description=OrderMgmt — close_rakuten_orders (DISABLED — RMS close unverified)
+Documentation=https://github.com/retailpulses/OrderMgmt
+
+[Timer]
+Unit=pipeline-scheduler@close_rakuten_orders.service
+# Intentionally disabled — no OnCalendar until RMS close is verified.
+# OnCalendar=*-*-* *:10,20,30,40,50:00
+Persistent=true
+AccuracySec=1s
+RandomizedDelaySec=0
+
+[Install]
+WantedBy=timers.target

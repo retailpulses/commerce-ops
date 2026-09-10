@@ -1,0 +1,36 @@
+[Unit]
+Description=Homesbliss Portal acceptance relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=portal-acceptance-relay
+Group=portal-acceptance-relay
+WorkingDirectory=/opt/portal-acceptance-relay/current
+EnvironmentFile=/etc/portal-acceptance-relay.env
+ExecStart=/usr/bin/node server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+# Node/V8 requires executable memory mappings during snapshot startup.
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+UMask=0077
+LimitNOFILE=256
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

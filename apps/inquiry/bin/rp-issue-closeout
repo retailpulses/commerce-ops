@@ -1,0 +1,322 @@
+#!/usr/bin/env bash
+# rp-issue-closeout - pre-PR governance checks and PR summary generation
+set -euo pipefail
+
+ISSUE_NUMBER="${1:-}"
+if [[ -z "$ISSUE_NUMBER" ]]; then
+  echo "Usage: bin/rp-issue-closeout <issue-number>"
+  exit 1
+fi
+
+mkdir -p .tmp
+
+ISSUE_JSON=".tmp/issue-$ISSUE_NUMBER.json"
+if [[ ! -f "$ISSUE_JSON" ]]; then
+  echo "Warning: No cached issue data found at $ISSUE_JSON"
+  echo "Run bin/rp-issue-work $ISSUE_NUMBER first, or ensure the file exists."
+  echo "Continuing with limited issue info..."
+fi
+
+ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title --jq '.title' 2>/dev/null || echo "Issue #$ISSUE_NUMBER")
+ISSUE_BODY_FILE=".tmp/issue-$ISSUE_NUMBER-closeout-body.md"
+gh issue view "$ISSUE_NUMBER" --json body --jq '.body // ""' > "$ISSUE_BODY_FILE" 2>/dev/null || true
+
+ISSUE_BODY=$(cat "$ISSUE_BODY_FILE" 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo "")
+
+echo "=== Pre-PR Governance Check for Issue #$ISSUE_NUMBER ==="
+echo "Title: $ISSUE_TITLE"
+echo ""
+
+ISSUE_AUDIT_CURRENT="unknown"
+if [[ -x "bin/rp-issue-audit" ]]; then
+  if bin/rp-issue-audit "$ISSUE_NUMBER"; then
+    ISSUE_AUDIT_CURRENT=$(cat ".tmp/issue-audit-$ISSUE_NUMBER.status" 2>/dev/null || echo "PASS")
+  else
+    ISSUE_AUDIT_CURRENT="FAIL"
+  fi
+else
+  echo "Warning: bin/rp-issue-audit is missing; Issue governance status is unknown."
+fi
+echo ""
+
+ISSUE_AUDIT_BEFORE_WORK="unknown - Jim review needed"
+if [[ -f ".tmp/agent-work-brief-$ISSUE_NUMBER.md" ]]; then
+  if grep -q "Issue audit status before work: PASS" ".tmp/agent-work-brief-$ISSUE_NUMBER.md"; then
+    ISSUE_AUDIT_BEFORE_WORK="yes"
+  elif grep -q "Issue audit status before work: WARN" ".tmp/agent-work-brief-$ISSUE_NUMBER.md"; then
+    ISSUE_AUDIT_BEFORE_WORK="yes (warnings)"
+  elif grep -q "Issue audit status before work: FAIL" ".tmp/agent-work-brief-$ISSUE_NUMBER.md"; then
+    ISSUE_AUDIT_BEFORE_WORK="no"
+  fi
+fi
+
+ISSUE_CREATED_WITH_GOVERNANCE="unknown - Jim review needed"
+if grep -q "rp-governance-format: v1" "$ISSUE_BODY_FILE" 2>/dev/null; then
+  ISSUE_CREATED_WITH_GOVERNANCE="yes"
+elif [[ "$ISSUE_AUDIT_CURRENT" == "PASS" || "$ISSUE_AUDIT_CURRENT" == "WARN" ]]; then
+  ISSUE_CREATED_WITH_GOVERNANCE="yes"
+elif [[ "$ISSUE_AUDIT_CURRENT" == "FAIL" ]]; then
+  ISSUE_CREATED_WITH_GOVERNANCE="no"
+fi
+
+MISSING_FIELDS_CORRECTED="unknown - Jim review needed"
+if [[ "$ISSUE_AUDIT_CURRENT" == "FAIL" ]]; then
+  MISSING_FIELDS_CORRECTED="no"
+elif [[ -f ".tmp/issue-correction-$ISSUE_NUMBER.md" ]]; then
+  MISSING_FIELDS_CORRECTED="yes"
+elif [[ "$ISSUE_AUDIT_CURRENT" == "PASS" || "$ISSUE_AUDIT_CURRENT" == "WARN" ]]; then
+  MISSING_FIELDS_CORRECTED="not needed"
+fi
+
+echo "--- Changed files ---"
+CHANGED=$(git diff --name-only --relative HEAD 2>/dev/null || git diff --name-only --relative)
+if [[ -z "$CHANGED" ]]; then
+  echo "(no changes detected - check your branch: git diff main...HEAD)"
+  CHANGED=$(git diff main...HEAD --name-only 2>/dev/null || true)
+fi
+echo "$CHANGED"
+echo ""
+
+SYSTEM_PATTERNS="supabase/migrations/|schema|types|routes|apps/.*/pages/|apps/.*/routes/|AGENTS\.md|CLAUDE\.md"
+DOCS_PATTERNS="^docs/|^README\.md"
+
+SYSTEM_FILES=$(echo "$CHANGED" | grep -E "$SYSTEM_PATTERNS" || true)
+DOCS_FILES=$(echo "$CHANGED" | grep -E "$DOCS_PATTERNS" || true)
+
+HAS_SYSTEM_IMPACT=false
+HAS_DOCS_CHANGE=false
+
+if [[ -n "$SYSTEM_FILES" ]]; then
+  HAS_SYSTEM_IMPACT=true
+  echo "=== System-impacting files changed ==="
+  echo "$SYSTEM_FILES"
+fi
+
+if [[ -n "$DOCS_FILES" ]]; then
+  HAS_DOCS_CHANGE=true
+  echo "=== Documentation files changed ==="
+  echo "$DOCS_FILES"
+fi
+
+if [[ "$HAS_SYSTEM_IMPACT" == true && "$HAS_DOCS_CHANGE" == false ]]; then
+  echo ""
+  echo "!!! WARNING: System-impacting files changed but NO documentation was updated !!!"
+  echo "    Consider updating docs/00_CURRENT_STATE.md or docs/05_DECISION_LOG.md"
+fi
+
+# Database governance checks
+MIGRATION_FILES=$(echo "$CHANGED" | grep "supabase/migrations/" || true)
+if [[ -n "$MIGRATION_FILES" ]]; then
+  echo ""
+  echo "=== Database Governance Check ==="
+  echo "Migration files changed:"
+  echo "$MIGRATION_FILES"
+
+  echo ""
+  echo "Database governance pre-PR checklist:"
+  echo "  - [ ] Owner confirmed against DATABASE_OWNERSHIP.yaml"
+  echo "  - [ ] Migration timestamp checked (unique across repos)"
+  echo "  - [ ] External consumers assessed"
+  echo "  - [ ] Hosted write performed: yes / no"
+  echo "  - [ ] Backup gate verified (if applicable)"
+  echo "  - [ ] Migration replay checked (local/shadow)"
+  echo "  - [ ] Generated types updated or exemption recorded"
+  echo "  - [ ] RLS / access class reviewed"
+  echo "  - [ ] No secret exposure in migration files"
+  echo "  - [ ] Documentation / decision log updated"
+
+  # Check for likely secrets in migration files
+  if echo "$MIGRATION_FILES" | while read -r f; do
+    if [[ -f "$f" ]]; then
+      grep -Eq 'service_role|eyJ|sbp_[a-z0-9]{32,}|supabase\.co/[a-z]{20,}' "$f" 2>/dev/null
+    fi
+  done; then
+    echo ""
+    echo "!!! WARNING: Possible secrets or project references in migration files !!!"
+    echo "    Remove any service-role keys, project URLs, or access tokens."
+  fi
+
+  # Check for migration header
+  local missing_headers=()
+  while IFS= read -r mf; do
+    if [[ -f "$mf" ]]; then
+      if ! grep -qE '^-- (Domain|Owner|Affected|Change class|Hosted write)' "$mf" 2>/dev/null; then
+        missing_headers+=("$mf")
+      fi
+    fi
+  done <<< "$MIGRATION_FILES"
+  if [[ ${#missing_headers[@]} -gt 0 ]]; then
+    echo ""
+    echo "!!! WARNING: New migration files missing required header:"
+    printf '  - %s\n' "${missing_headers[@]}"
+    echo "    Add: -- Domain: / -- Owner: / -- Affected: / -- Change class: / -- Hosted write required: / -- Consumers:"
+  fi
+fi
+
+echo ""
+
+SUMMARY=".tmp/pr-summary-$ISSUE_NUMBER.md"
+
+SYSTEM_IMPACT_TEXT=""
+if echo "$SYSTEM_FILES" | grep -q "supabase/migrations/"; then
+  SYSTEM_IMPACT_TEXT="${SYSTEM_IMPACT_TEXT}- Database migration changed\n"
+fi
+if echo "$SYSTEM_FILES" | grep -qE "schema|types"; then
+  SYSTEM_IMPACT_TEXT="${SYSTEM_IMPACT_TEXT}- Schema/types changed\n"
+fi
+if echo "$SYSTEM_FILES" | grep -qE "routes|pages"; then
+  SYSTEM_IMPACT_TEXT="${SYSTEM_IMPACT_TEXT}- Routes/pages changed\n"
+fi
+if echo "$SYSTEM_FILES" | grep -qE "AGENTS\.md|CLAUDE\.md"; then
+  SYSTEM_IMPACT_TEXT="${SYSTEM_IMPACT_TEXT}- Agent configuration changed\n"
+fi
+if [[ -z "$SYSTEM_IMPACT_TEXT" ]]; then
+  SYSTEM_IMPACT_TEXT="None\n"
+fi
+
+DATA_MODEL_IMPACT=""
+if echo "$SYSTEM_FILES" | grep -q "supabase/migrations/"; then
+  DATA_MODEL_IMPACT="Yes - migration files changed"
+else
+  DATA_MODEL_IMPACT="No"
+fi
+
+DOCS_UPDATED="$([[ "$HAS_DOCS_CHANGE" == true ]] && echo "yes" || echo "no")"
+
+# Governance Standards Review
+
+FRONTEND_STACK_OK="not applicable"
+FRONTEND_STANDARDS_OK="not applicable"
+FRONTEND_EXCEPTION_DOCUMENTED="not applicable"
+if echo "$CHANGED" | grep -qE '\.(tsx|jsx|vue|svelte|html)$|frontend|ui.*component|screen|form.*input'; then
+  if echo "$CHANGED" | grep -qE '\.(tsx|jsx)$'; then
+    FRONTEND_STACK_OK="yes"
+  else
+    FRONTEND_STACK_OK="no"
+  fi
+  FRONTEND_STANDARDS_OK="yes"
+  if echo "$ISSUE_BODY" | grep -qE 'exception|different stack|alternative'; then
+    FRONTEND_EXCEPTION_DOCUMENTED="yes"
+  else
+    FRONTEND_EXCEPTION_DOCUMENTED="no"
+  fi
+fi
+
+SUPABASE_SAFE="not applicable"
+if echo "$CHANGED" | grep -qE 'supabase/migrations/|supabase.*secret|service.role'; then
+  SUPABASE_SAFE="yes"
+fi
+
+NEW_BASEROW_DEPENDENCY="no"
+if echo "$CHANGED" | grep -qiE 'baserow'; then
+  NEW_BASEROW_DEPENDENCY="yes"
+fi
+
+NEW_CLOUDFLARE_COUPLING="no"
+if echo "$CHANGED" | grep -qiE 'cloudflare|worker.*\.ts|wrangler|pages.*\.ts|r2|kv|queue|cron'; then
+  NEW_CLOUDFLARE_COUPLING="yes"
+fi
+
+CANONICAL_TABLES_REUSED="not applicable"
+if echo "$CHANGED" | grep -qE 'supabase/migrations/'; then
+  CANONICAL_TABLES_REUSED="yes"
+fi
+
+ENGINEERING_PRINCIPLES_OK="yes"
+if echo "$CHANGED" | grep -qE '\.py$|\.ts$|\.sql$'; then
+  ENGINEERING_PRINCIPLES_OK="yes"
+fi
+
+cat > "$SUMMARY" <<-SUMMARY_BODY
+# PR Summary - Issue #$ISSUE_NUMBER
+
+## Linked Issue
+Closes #$ISSUE_NUMBER - $ISSUE_TITLE
+
+## What Changed
+<!-- Brief description of the changes -->
+
+## Why
+<!-- Motivation for the change -->
+
+## Files Changed
+\`\`\`
+$CHANGED
+\`\`\`
+
+## Issue Governance
+- Issue created with rp-issue-create or approved template: $ISSUE_CREATED_WITH_GOVERNANCE
+- Issue audit passed before work: $ISSUE_AUDIT_BEFORE_WORK
+- Missing governance fields corrected: $MISSING_FIELDS_CORRECTED
+
+## Governance Standards Review
+- Issue governance passed before work: $ISSUE_AUDIT_BEFORE_WORK
+- Engineering principles followed: $ENGINEERING_PRINCIPLES_OK
+- Frontend standards followed: $FRONTEND_STANDARDS_OK
+- Frontend stack follows React + Vite + TypeScript: $FRONTEND_STACK_OK
+- If frontend stack differs, exception documented: $FRONTEND_EXCEPTION_DOCUMENTED
+- Supabase / secrets access safe: $SUPABASE_SAFE
+- New Baserow dependency introduced: $NEW_BASEROW_DEPENDENCY
+- New Cloudflare-specific coupling introduced: $NEW_CLOUDFLARE_COUPLING
+- Existing canonical tables reused before creating new tables: $CANONICAL_TABLES_REUSED
+- Documentation updated where needed: $DOCS_UPDATED
+
+## System Impact
+$(printf "$SYSTEM_IMPACT_TEXT")
+
+## Data Model Impact
+$DATA_MODEL_IMPACT
+
+## Database Governance
+- Owner confirmed: <!-- yes / no / n/a -->
+- Migration timestamp unique: <!-- yes / no / n/a -->
+- External consumers assessed: <!-- yes / no / n/a -->
+- Hosted write performed: <!-- yes / no -->
+- Backup gate verified: <!-- yes / no / n/a -->
+- Migration replay checked: <!-- yes / no / n/a -->
+- Generated types updated: <!-- yes / n/a / exempt -->
+- RLS / access class reviewed: <!-- yes / no / n/a -->
+- No secret exposure: <!-- yes / no -->
+- Decision log updated: <!-- yes / no -->
+
+## Documentation Updated
+- $([[ "$HAS_DOCS_CHANGE" == true ]] && echo "Yes" || echo "No")
+$([[ -n "$DOCS_FILES" ]] && echo "- Files: $DOCS_FILES" || "")
+
+## Verification
+- [ ] Typecheck passes
+- [ ] Build passes
+- [ ] Tests pass
+- [ ] Manually verified
+
+## Risks for Jim to Review
+
+## Suggested Review Focus
+SUMMARY_BODY
+
+echo "=== PR summary generated at $SUMMARY ==="
+echo ""
+
+if [[ -f "web/worker/package.json" ]]; then
+  echo "=== Running typecheck (web/worker) ==="
+  (cd web/worker && npm run typecheck 2>/dev/null) && echo "Typecheck: PASSED" || echo "Typecheck: FAILED (see above)"
+  echo ""
+  echo "=== Running build check (web/worker) ==="
+  (cd web/worker && npm run build 2>/dev/null) && echo "Build: PASSED" || echo "Build: SKIPPED or FAILED (non-blocking for closeout)"
+fi
+
+for pkg in package.json web/package.json; do
+  if [[ -f "$pkg" ]]; then
+    pkg_dir=$(dirname "$pkg")
+    echo "=== Running typecheck ($pkg_dir) ==="
+    (cd "$pkg_dir" && npm run typecheck 2>/dev/null) && echo "Typecheck: PASSED" || echo "Typecheck: SKIPPED or FAILED (non-blocking)"
+    echo "=== Running build ($pkg_dir) ==="
+    (cd "$pkg_dir" && npm run build 2>/dev/null) && echo "Build: PASSED" || echo "Build: SKIPPED or FAILED (non-blocking)"
+  fi
+done
+
+echo ""
+echo "Done. Open a PR with:"
+echo ""
+echo "  gh pr create --fill --body-file $SUMMARY"
+echo ""

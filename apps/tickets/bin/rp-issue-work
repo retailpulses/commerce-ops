@@ -1,0 +1,270 @@
+#!/usr/bin/env bash
+# rp-issue-work - prepare agent work on an existing governed GitHub Issue
+set -euo pipefail
+
+ISSUE_NUMBER=""
+ALLOW_NONCOMPLIANT=false
+
+usage() {
+  cat <<-USAGE
+Usage: bin/rp-issue-work <issue-number> [options]
+
+Options:
+  --allow-noncompliant-issue  Continue even when the Issue fails governance audit.
+  --help                      Show help.
+USAGE
+}
+
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --allow-noncompliant-issue)
+      ALLOW_NONCOMPLIANT=true
+      shift
+      ;;
+    -*)
+      die "Unknown option: $1"
+      ;;
+    *)
+      if [[ -n "$ISSUE_NUMBER" ]]; then
+        die "Only one issue number allowed"
+      fi
+      ISSUE_NUMBER="$1"
+      shift
+      ;;
+  esac
+done
+
+[[ -n "$ISSUE_NUMBER" ]] || {
+  usage
+  exit 1
+}
+[[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]] || die "Issue number must be numeric"
+
+if ! command -v gh &>/dev/null; then
+  die "gh CLI is not installed or not in PATH"
+fi
+if ! gh auth status &>/dev/null; then
+  die "gh CLI is not authenticated. Run 'gh auth login' first."
+fi
+if [[ ! -x "bin/rp-issue-audit" ]]; then
+  die "bin/rp-issue-audit is missing or not executable. Install the current governance kit before starting work."
+fi
+
+mkdir -p .tmp
+
+echo "=== Auditing issue #$ISSUE_NUMBER ==="
+if ! bin/rp-issue-audit "$ISSUE_NUMBER" --fix-draft; then
+  if [[ "$ALLOW_NONCOMPLIANT" != true ]]; then
+    echo ""
+    echo "Issue #$ISSUE_NUMBER failed governance audit."
+    echo "Coding must not start from a non-compliant Issue."
+    echo "Correction draft: .tmp/issue-correction-$ISSUE_NUMBER.md"
+    echo ""
+    echo "Correct the Issue first, then rerun:"
+    echo "  bin/rp-issue-work $ISSUE_NUMBER"
+    echo ""
+    echo "Explicit exception only:"
+    echo "  bin/rp-issue-work $ISSUE_NUMBER --allow-noncompliant-issue"
+    exit 1
+  fi
+  echo "WARN: continuing with non-compliant Issue because --allow-noncompliant-issue was provided."
+fi
+
+echo "=== Checking for missing relevant governance impact fields ==="
+ISSUE_BODY_FILE=".tmp/issue-$ISSUE_NUMBER-body.md"
+if [[ -f "$ISSUE_BODY_FILE" ]]; then
+  MISSING_RELEVANT=()
+  body_content=$(cat "$ISSUE_BODY_FILE" | tr '[:upper:]' '[:lower:]')
+
+  if echo "$body_content" | grep -qE 'frontend|ui|page|route|component|screen|form|react|vite'; then
+    if ! grep -q "Frontend Stack Impact" "$ISSUE_BODY_FILE" 2>/dev/null; then
+      MISSING_RELEVANT+=("Frontend Stack Impact")
+    fi
+  fi
+  if echo "$body_content" | grep -qE 'supabase|migration|rls|postgres|schema|secret|env|\.env|service.role'; then
+    if ! grep -q "Supabase Impact" "$ISSUE_BODY_FILE" 2>/dev/null; then
+      MISSING_RELEVANT+=("Supabase Impact")
+    fi
+    if ! grep -q "Secrets / Permissions Impact" "$ISSUE_BODY_FILE" 2>/dev/null; then
+      MISSING_RELEVANT+=("Secrets / Permissions Impact")
+    fi
+  fi
+  if echo "$body_content" | grep -qE 'cloudflare|worker|wrangler|pages|r2|kv|queue|cron|d1'; then
+    if ! grep -q "Cloudflare Dependency" "$ISSUE_BODY_FILE" 2>/dev/null; then
+      MISSING_RELEVANT+=("Cloudflare Dependency")
+    fi
+  fi
+  if echo "$body_content" | grep -qE 'baserow'; then
+    if ! grep -q "Baserow Dependency" "$ISSUE_BODY_FILE" 2>/dev/null; then
+      MISSING_RELEVANT+=("Baserow Dependency / Legacy Impact")
+    fi
+  fi
+
+  if [[ ${#MISSING_RELEVANT[@]} -gt 0 ]]; then
+    echo "FAIL: Issue #$ISSUE_NUMBER is missing relevant governance impact fields:"
+    printf '  - %s\n' "${MISSING_RELEVANT[@]}"
+    echo ""
+    if [[ "$ALLOW_NONCOMPLIANT" != true ]]; then
+      echo "Correct the Issue first, then rerun:"
+      echo "  bin/rp-issue-work $ISSUE_NUMBER"
+      echo ""
+      echo "Explicit exception only:"
+      echo "  bin/rp-issue-work $ISSUE_NUMBER --allow-noncompliant-issue"
+      exit 1
+    fi
+    echo "WARN: continuing with missing relevant fields because --allow-noncompliant-issue was provided."
+  else
+    echo "All relevant governance impact fields present."
+  fi
+fi
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  die "Working tree is not clean. Commit or stash changes first."
+fi
+
+echo "=== Fetching issue #$ISSUE_NUMBER ==="
+gh issue view "$ISSUE_NUMBER" --json title,body,labels,state > ".tmp/issue-$ISSUE_NUMBER.json"
+gh issue view "$ISSUE_NUMBER" --json title --jq '.title' > ".tmp/issue-$ISSUE_NUMBER-title.txt"
+gh issue view "$ISSUE_NUMBER" --json body --jq '.body // ""' > ".tmp/issue-$ISSUE_NUMBER-body.txt"
+
+TITLE=$(cat ".tmp/issue-$ISSUE_NUMBER-title.txt")
+echo "Issue: #$ISSUE_NUMBER - $TITLE"
+echo ""
+
+# Detect database/schema work from issue body
+IS_DB_WORK=false
+ISSUE_BODY=$(cat ".tmp/issue-$ISSUE_NUMBER-body.txt")
+if echo "$ISSUE_BODY" | grep -Eiq 'supabase|migration|schema|table|view|function|rpc|rls|storage|generated.type|access.class|hosted.write|service.role'; then
+  IS_DB_WORK=true
+  echo "=== Database governance check ==="
+  echo "Database-related keywords detected in issue body."
+
+  if [[ ! -f "docs/12_DATA_ACCESS_AND_SECRETS.md" ]]; then
+    echo "WARN: docs/12_DATA_ACCESS_AND_SECRETS.md not found. Database work requires this document."
+  fi
+
+  if [[ ! -f "docs/16_DATABASE_GOVERNANCE.md" ]]; then
+    echo "FAIL: docs/16_DATABASE_GOVERNANCE.md is not installed."
+    echo "Install the current governance kit before database work:"
+    echo "  (from rp-governance-kit) bin/rp-governance-install <this-repo>"
+    exit 1
+  fi
+
+  # Check for governance ref
+  if [[ -f ".github/governance-ref.txt" ]]; then
+    INSTALLED_REF=$(cat ".github/governance-ref.txt")
+    echo "Installed governance ref: $INSTALLED_REF"
+  else
+    echo "WARN: No .github/governance-ref.txt found. Installed governance version is unknown."
+  fi
+
+  # Check for local declaration
+  if [[ -f "docs/16_DATABASE_GOVERNANCE.local.md" ]]; then
+    echo "Local database declaration: found"
+  else
+    echo "WARN: docs/16_DATABASE_GOVERNANCE.local.md not found. Create it with repository-specific database declarations."
+  fi
+
+  echo ""
+fi
+
+BRIEF=".tmp/agent-work-brief-$ISSUE_NUMBER.md"
+AUDIT_STATUS=$(cat ".tmp/issue-audit-$ISSUE_NUMBER.status" 2>/dev/null || echo "unknown")
+
+cat > "$BRIEF" <<-BRIEF_HEADER
+# Agent Work Brief - Issue #$ISSUE_NUMBER
+
+## Issue
+$TITLE
+
+## Issue governance
+
+- Coding must not start from a non-compliant Issue.
+- If the Issue does not follow governance structure, correct the Issue before implementation.
+- Issue audit status before work: $AUDIT_STATUS
+
+## Required documents
+
+- [ ] docs/00_CURRENT_STATE.md
+- [ ] docs/10_ENGINEERING_PRINCIPLES.md
+- [ ] docs/14_ISSUE_GOVERNANCE.md
+BRIEF_HEADER
+
+for doc in docs/01_SYSTEM_OVERVIEW.md docs/04_DATA_MODEL.md docs/05_DECISION_LOG.md docs/07_AGENT_CONTEXT.md docs/11_FRONTEND_STANDARDS.md docs/12_DATA_ACCESS_AND_SECRETS.md docs/13_PLATFORM_DEPENDENCY_POLICY.md AGENTS.md CLAUDE.md; do
+  if [[ -f "$doc" ]]; then
+    echo "- [ ] $doc" >> "$BRIEF"
+  fi
+done
+
+# Add database governance docs when applicable
+if [[ "$IS_DB_WORK" == true ]]; then
+  for doc in docs/12_DATA_ACCESS_AND_SECRETS.md docs/16_DATABASE_GOVERNANCE.md docs/16_DATABASE_GOVERNANCE.local.md; do
+    if [[ -f "$doc" ]]; then
+      echo "- [ ] $doc" >> "$BRIEF"
+    fi
+  done
+  echo "" >> "$BRIEF"
+  echo "## Database Governance" >> "$BRIEF"
+  echo "" >> "$BRIEF"
+  echo "- Check \`docs/DATABASE_OWNERSHIP.yaml\` in rp-governance-kit for domain ownership." >> "$BRIEF"
+  echo "- If modifying objects owned by another repository, an explicit cross-domain exception is required." >> "$BRIEF"
+  echo "- Migration naming: \`YYYYMMDDHHMMSS_description.sql\` — unique across all Retailpulses repos." >> "$BRIEF"
+  echo "- Every migration must include the required header comment." >> "$BRIEF"
+fi
+
+SAFE_TITLE=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | head -c 60)
+BRANCH="issue-$ISSUE_NUMBER-$SAFE_TITLE"
+
+cat >> "$BRIEF" <<-BRIEF_BODY
+
+## Suggested branch
+
+\`$BRANCH\`
+
+## Implementation rules
+
+- Keep the Issue scope authoritative.
+- Do not broaden scope without updating the Issue.
+- Update docs when current state, data model, runtime, or user workflow changes.
+- Run \`bin/rp-issue-closeout $ISSUE_NUMBER\` before opening a PR.
+
+## Pre-PR
+
+\`bin/rp-issue-closeout $ISSUE_NUMBER\`
+BRIEF_BODY
+
+ISSUE_BODY_FILE=".tmp/issue-$ISSUE_NUMBER-body.md"
+if [[ -f "$ISSUE_BODY_FILE" ]]; then
+  echo ""
+  echo "=== Standards relevance check ==="
+  ISSUE_BODY=$(cat "$ISSUE_BODY_FILE" | tr '[:upper:]' '[:lower:]')
+
+  if echo "$ISSUE_BODY" | grep -qE 'frontend|ui|page|route|component|screen|form|react|vite'; then
+    echo "- Frontend standards (docs/11_FRONTEND_STANDARDS.md) are relevant."
+  fi
+  if echo "$ISSUE_BODY" | grep -qE 'supabase|migration|rls|postgres|schema|secret|env|\.env|service.role|anon'; then
+    echo "- Data access standards (docs/12_DATA_ACCESS_AND_SECRETS.md) are relevant."
+  fi
+  if echo "$ISSUE_BODY" | grep -qE 'cloudflare|worker|wrangler|pages|r2|kv|queue|cron|d1'; then
+    echo "- Platform dependency policy (docs/13_PLATFORM_DEPENDENCY_POLICY.md) is relevant."
+  fi
+  if echo "$ISSUE_BODY" | grep -qE 'baserow'; then
+    echo "- WARNING: Baserow referenced in Issue. Check platform dependency policy."
+  fi
+fi
+
+echo ""
+echo "Generated work brief: $BRIEF"
+echo ""
+echo "Start branch when ready:"
+echo "  git checkout -b $BRANCH"
+echo ""

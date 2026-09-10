@@ -1,0 +1,67 @@
+[
+  {
+    "id": 10495,
+    "Inquiry Date": "2026-05-22T10:30:00+09:00",
+    "Last Custom Message": "こちらの自転車倉庫は在庫ありますか？",
+    "Inquiry body": "全新品 【スタンド搭載】自転車倉庫 2台用 物置 屋外 スチール 施錠可能...",
+    "Product Name": "全新品 【スタンド搭載】自転車倉庫 2台用 物置 屋外 スチール 施錠可能 防水 大型 ガレージ",
+    "Customer Nickname": "リク",
+    "Account": { "id": 1, "value": "Shop2" },
+    "Status": null,
+    "Last inbound time": "2026-05-22T10:30:00+09:00",
+    "Products": null,
+    "Inquiry Type": null
+  },
+  {
+    "id": 7162,
+    "Inquiry Date": "2026-05-20T14:00:00+09:00",
+    "Last Custom Message": "ナチュラル テーブルの在庫はありますか？",
+    "Inquiry body": "ナチュラル テーブル 120cm についてお伺いします",
+    "Product Name": "ナチュラル テーブル 120cm ダイニング",
+    "Customer Nickname": "田中",
+    "Account": { "id": 2, "value": "Shop1" },
+    "Status": null,
+    "Last inbound time": "2026-05-20T14:00:00+09:00",
+    "Products": null,
+    "Inquiry Type": null
+  },
+  {
+    "id": 10001,
+    "Inquiry Date": "2026-05-23T09:00:00+09:00",
+    "Last Custom Message": "まとめて5脚購入したいのですが、割引はありますか？",
+    "Inquiry body": "ダイニングチェア 5脚 まとめ買い",
+    "Product Name": "ダイニングチェア ブラック 4脚セット",
+    "Customer Nickname": "佐藤",
+    "Account": { "id": 3, "value": "Shop3" },
+    "Status": null,
+    "Last inbound time": "2026-05-23T09:00:00+09:00",
+    "Products": null,
+    "Inquiry Type": null
+  },
+  {
+    "id": 10002,
+    "Inquiry Date": "2026-05-23T10:00:00+09:00",
+    "Last Custom Message": "沖縄まで発送可能ですか？",
+    "Inquiry body": "沖縄 離島 配送について",
+    "Product Name": "ソファー 3人掛け グレー",
+    "Customer Nickname": "山田",
+    "Account": { "id": 1, "value": "Shop2" },
+    "Status": null,
+    "Last inbound time": "2026-05-23T10:00:00+09:00",
+    "Products": null,
+    "Inquiry Type": null
+  },
+  {
+    "id": 10003,
+    "Inquiry Date": "2026-05-23T11:00:00+09:00",
+    "Last Custom Message": "サイズを教えてください。幅と高さはどのくらいですか？",
+    "Inquiry body": "商品のサイズについて質問です",
+    "Product Name": "本棚 5段 ホワイト",
+    "Customer Nickname": "伊藤",
+    "Account": { "id": 4, "value": "Shop4" },
+    "Status": null,
+    "Last inbound time": "2026-05-23T11:00:00+09:00",
+    "Products": null,
+    "Inquiry Type": null
+  }
+]

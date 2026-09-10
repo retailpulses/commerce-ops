@@ -1,0 +1,10 @@
+node_modules/
+build/
+.svelte-kit/
+.wrangler/
+.DS_Store
+.env
+.dev.vars
+master_credentials.md
+
+.tmp/

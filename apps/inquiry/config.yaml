@@ -1,0 +1,30 @@
+runtime:
+  cursor_store: "file"
+  cursor_file: ".runtime/cursors.json"
+  log_store: "file"
+  log_file: ".runtime/runs.jsonl"
+  batch_size: 50
+  dry_run: true
+
+classification:
+  llm_fallback_enabled: true
+  confidence_threshold: 0.75
+
+product_matching:
+  min_score: 0.62
+  cache_ttl_minutes: 0
+
+enrichment:
+  # Dedicated Chrome data directory for Playwright.  Must NOT be the
+  # default Chrome user-data directory — Chrome blocks remote debugging
+  # (CDP) on the default location.  This directory holds Mercari Shops
+  # sessions created via the one-time auth setup script.
+  chrome_data_dir: "/Users/user/mercari-playwright-chrome"
+  headless: true
+  timeout: 120
+  default_chrome_profile: "shop4"
+  shop_profiles:
+    Shop1: "shop1"
+    Shop2: "shop2"
+    Shop3: "shop3"
+    Shop4: "shop4"

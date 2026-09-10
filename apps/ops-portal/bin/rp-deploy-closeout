@@ -1,0 +1,193 @@
+#!/usr/bin/env bash
+# rp-deploy-closeout - generate a post-deploy closeout report
+# Reports default to GitHub Actions job summary, not committed files.
+set -euo pipefail
+
+ENV=""
+SHA=""
+REPO=""
+RUN_URL=""
+DEPLOYED_TARGET=""
+SMOKE_TEST_RESULT=""
+JOB_SUMMARY=false
+COMMENT_PR=false
+COMMENT_ISSUE=false
+ARTIFACT=false
+DRY_RUN=false
+
+usage() {
+  cat <<-USAGE
+Usage: bin/rp-deploy-closeout [options]
+
+Generate a post-deploy closeout report. Reports to GitHub job summary,
+PR/Issue comments, or artifact. Never committed to the repo.
+
+Options:
+  --env <name>              Deployment environment (production, staging, etc.)
+  --sha <commit-sha>        Deployed commit SHA
+  --repo <owner/repo>       Repository
+  --run-url <url>           GitHub Actions run URL
+  --deployed-target <url>   Deployed target URL or worker name
+  --smoke-test-result <r>   Smoke test result: pass, fail, unknown
+  --job-summary             Write to GitHub Actions job summary (\$GITHUB_STEP_SUMMARY)
+  --comment-pr              Comment on related PR if detectable
+  --comment-issue           Comment on related Issue if detectable
+  --artifact                Prepare .tmp report for artifact upload
+  --dry-run                 Print actions without executing
+  --help                    Show this help
+USAGE
+}
+
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h) usage; exit 0 ;;
+    --env) [[ $# -ge 2 ]] || die "--env requires a value"; ENV="$2"; shift 2 ;;
+    --sha) [[ $# -ge 2 ]] || die "--sha requires a value"; SHA="$2"; shift 2 ;;
+    --repo) [[ $# -ge 2 ]] || die "--repo requires a value"; REPO="$2"; shift 2 ;;
+    --run-url) [[ $# -ge 2 ]] || die "--run-url requires a value"; RUN_URL="$2"; shift 2 ;;
+    --deployed-target) [[ $# -ge 2 ]] || die "--deployed-target requires a value"; DEPLOYED_TARGET="$2"; shift 2 ;;
+    --smoke-test-result) [[ $# -ge 2 ]] || die "--smoke-test-result requires a value"; SMOKE_TEST_RESULT="$2"; shift 2 ;;
+    --job-summary) JOB_SUMMARY=true; shift ;;
+    --comment-pr) COMMENT_PR=true; shift ;;
+    --comment-issue) COMMENT_ISSUE=true; shift ;;
+    --artifact) ARTIFACT=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
+    *) die "Unknown option: $1" ;;
+  esac
+done
+
+[[ -n "$REPO" ]] || die "--repo is required"
+[[ -n "$SHA" ]] || die "--sha is required"
+
+mkdir -p .tmp
+REPORT=".tmp/deploy-closeout-${SHA}.md"
+
+# --- Detect related PR ---
+RELATED_PR=""
+if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+  if [[ -n "$GITHUB_REF" ]] && echo "$GITHUB_REF" | grep -qE 'refs/pull/'; then
+    RELATED_PR=$(echo "$GITHUB_REF" | sed 's|refs/pull/||; s|/merge||')
+  fi
+fi
+
+# --- Detect related Issue from commit message ---
+RELATED_ISSUE=""
+if [[ -z "$RELATED_ISSUE" ]] && command -v gh &>/dev/null; then
+  COMMIT_MSG=$(gh api "repos/$REPO/commits/$SHA/commit" --jq '.message' 2>/dev/null || echo "")
+  RELATED_ISSUE=$(echo "$COMMIT_MSG" | grep -oE '#[0-9]+' | head -1 | tr -d '#' || echo "")
+fi
+
+# --- Check governance status ---
+GOVERNANCE_STATUS="unknown"
+if command -v gh &>/dev/null && [[ -n "$GITHUB_ACTIONS" ]]; then
+  if gh api "repos/$REPO/actions/workflows/governance-checks.yml" --jq '.state' &>/dev/null 2>&1; then
+    GOVERNANCE_STATUS="present"
+  fi
+fi
+
+# --- Check for migrations ---
+HAS_MIGRATIONS=false
+if [[ -d supabase/migrations ]]; then
+  HAS_MIGRATIONS=true
+fi
+
+# --- Check for frontend build ---
+HAS_FRONTEND_BUILD=false
+if [[ -f web/worker/package.json ]] || [[ -f package.json ]] && grep -q '"build"' package.json 2>/dev/null; then
+  HAS_FRONTEND_BUILD=true
+fi
+
+# --- Detect changed files ---
+CHANGED_FILES=""
+if command -v git &>/dev/null && git rev-parse --git-dir &>/dev/null 2>&1; then
+  CHANGED_FILES=$(git diff --name-only "$SHA"..HEAD 2>/dev/null || echo "(detached or shallow)")
+fi
+
+HAS_DOCS_CHANGE=false
+if echo "$CHANGED_FILES" | grep -qE '^docs/|^README\.md'; then
+  HAS_DOCS_CHANGE=true
+fi
+
+# --- Build report ---
+cat > "$REPORT" <<-REPORT_BODY
+# Post-Deploy Closeout
+
+## Deployment
+
+- **Repository:** $REPO
+- **Environment:** ${ENV:-unknown}
+- **Commit SHA:** \`$SHA\`
+- **Run URL:** ${RUN_URL:-not provided}
+- **Deployed target:** ${DEPLOYED_TARGET:-not specified}
+- **Deploy status:** completed
+
+## Related
+
+- **Related PR:** ${RELATED_PR:-not detected}
+- **Related Issue:** ${RELATED_ISSUE:-not detected}
+- **Governance checks:** $GOVERNANCE_STATUS
+
+## Changes
+
+- **Changed files summary:** ${CHANGED_FILES:-(not available)}
+- **Supabase migrations included:** ${HAS_MIGRATIONS}
+- **Frontend build included:** ${HAS_FRONTEND_BUILD}
+- **Docs changed:** ${HAS_DOCS_CHANGE}
+
+## Verification
+
+- **Smoke test result:** ${SMOKE_TEST_RESULT:-unknown}
+
+## Risks / Follow-ups
+
+- _None recorded_
+REPORT_BODY
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo "[DRY-RUN] Report generated: $REPORT"
+  echo "[DRY-RUN] Would write to job summary: $JOB_SUMMARY"
+  echo "[DRY-RUN] Would comment on PR: $COMMENT_PR"
+  echo "[DRY-RUN] Would comment on Issue: $COMMENT_ISSUE"
+  echo "[DRY-RUN] Would prepare artifact: $ARTIFACT"
+  cat "$REPORT"
+  exit 0
+fi
+
+# --- Write to GitHub Actions job summary ---
+if [[ "$JOB_SUMMARY" == true ]] && [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+  cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+  echo "Report appended to \$GITHUB_STEP_SUMMARY"
+fi
+
+# --- Comment on related PR ---
+if [[ "$COMMENT_PR" == true ]] && [[ -n "$RELATED_PR" ]]; then
+  if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+    gh pr comment "$RELATED_PR" --repo "$REPO" --body "$(cat "$REPORT")" 2>/dev/null && echo "Commented on PR #$RELATED_PR" || echo "Warning: could not comment on PR #$RELATED_PR"
+  fi
+fi
+
+# --- Comment on related Issue ---
+if [[ "$COMMENT_ISSUE" == true ]] && [[ -n "$RELATED_ISSUE" ]]; then
+  if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+    gh issue comment "$RELATED_ISSUE" --repo "$REPO" --body "$(cat "$REPORT")" 2>/dev/null && echo "Commented on Issue #$RELATED_ISSUE" || echo "Warning: could not comment on Issue #$RELATED_ISSUE"
+  fi
+fi
+
+# --- Prepare artifact ---
+if [[ "$ARTIFACT" == true ]]; then
+  echo "Artifact ready: $REPORT"
+  echo "Upload via GitHub Actions:"
+  echo "  - uses: actions/upload-artifact@v4"
+  echo "    with:"
+  echo "      name: deploy-closeout-$SHA"
+  echo "      path: $REPORT"
+fi
+
+echo ""
+echo "Closeout report: $REPORT"
+echo "Reports are not committed. Use --artifact to upload as a GitHub Actions artifact."

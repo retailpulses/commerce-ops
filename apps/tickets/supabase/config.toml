@@ -1,0 +1,40 @@
+# CLI contract used by CI and local migration validation. Hosted project
+# settings must still be verified independently before a production migration.
+project_id = "ticket_handling_remediation"
+
+[db]
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "100MiB"
+
+# Explicitly preserve the hosted Auth posture. Supabase CLI expands omitted
+# config sections to local defaults during `config push`, so these values must
+# remain pinned even though ticketing does not use Supabase Auth directly.
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = []
+enable_refresh_token_rotation = true
+jwt_expiry = 3600
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m"
+otp_length = 8
+otp_expiry = 3600

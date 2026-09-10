@@ -1,0 +1,18 @@
+{
+  "name": "portal-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "OrderMgmt Portal API — thin backend for Portal SPA write operations against Supabase",
+  "scripts": {
+    "dev": "node --watch src/server.mjs",
+    "start": "node src/server.mjs",
+    "check": "node --check src/server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.18.1",
+    "@supabase/supabase-js": "^2.86.2",
+    "hono": "^4.10.7"
+  }
+}

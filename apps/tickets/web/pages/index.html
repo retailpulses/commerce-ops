@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ticket Reports — Homebliss</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <!-- Password Gate -->
+  <div id="gate" class="gate">
+    <div class="gate-box">
+      <h1>🏠 Homebliss</h1>
+      <p class="gate-subtitle">Ticket Report Viewer</p>
+      <input id="password-input" type="password" placeholder="パスワードを入力" autofocus />
+      <button id="login-btn">ログイン</button>
+      <p id="gate-error" class="error hidden">パスワードが正しくありません</p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="hidden">
+    <header>
+      <div class="header-inner">
+        <span class="logo">🏠 Homebliss Ticket Reports</span>
+        <button id="logout-btn" class="logout">ログアウト</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- Sidebar: report list -->
+      <aside id="sidebar">
+        <h2>レポート一覧</h2>
+        <p class="sidebar-hint">過去7日分</p>
+        <ul id="report-list"></ul>
+      </aside>
+
+      <!-- Main: report content -->
+      <main id="content">
+        <div id="placeholder" class="placeholder">
+          <p>← レポートを選択してください</p>
+        </div>
+        <div id="report-view" class="hidden">
+          <div class="report-header">
+            <h2 id="report-title"></h2>
+          </div>
+          <article id="report-body" class="markdown-body"></article>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

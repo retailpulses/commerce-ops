@@ -1,0 +1,13 @@
+-- Domain: product_catalog
+-- Owner: retailpulses/RPagentOS
+-- Affected: product_content fields extension
+-- Change class: additive
+-- Hosted write required: no
+-- Consumers: retailpulses/ticket-handling
+--
+-- Shared hosted-history alignment artifact.
+-- Canonical migration: retailpulses/RPagentOS (deployed via supabase db push)
+-- Reconciliation: retailpulses/RPagentOS#32
+--
+-- Applied to the shared hosted Supabase project.
+-- This file intentionally contains no executable SQL.

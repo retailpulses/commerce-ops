@@ -1,0 +1,25 @@
+# OrderMgmt Pipeline — shop order close
+#
+# Closes shipped orders on Mercari via the VPS relay (close_shop_orders).
+#
+# Runs every 10 minutes at :09, :19, :29, :39, :49, :59.
+# (Matches the Worker's close_shop_orders cron schedule.)
+#
+# Installation:
+#   sudo cp deploy/pipeline-close.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pipeline-close.timer
+
+[Unit]
+Description=OrderMgmt shop order close (close_shop_orders)
+Documentation=https://github.com/retailpulses/OrderMgmt
+After=network.target
+Wants=network.target
+
+[Timer]
+OnCalendar=*-*-* *:09,19,29,39,49,59:00
+Persistent=true
+RandomizedDelaySec=3
+
+[Install]
+WantedBy=timers.target

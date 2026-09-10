@@ -1,0 +1,24 @@
+{
+  "name": "mercari-ticket-reports",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "prebuild": "node -e \"const fs=require('fs');const h=fs.readFileSync('../frontend/dist/index.html','utf8');fs.writeFileSync('src/react-index-html.ts','export default '+JSON.stringify(h)+';\\n');console.log('Generated react-index-html.ts ('+h.length+' bytes)')\"",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.1",
+    "wrangler": "^4.98.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240605.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.4.0"
+  }
+}

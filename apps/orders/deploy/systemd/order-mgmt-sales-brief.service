@@ -1,0 +1,31 @@
+[Unit]
+Description=Multi-Platform Sales Brief (WeCom push)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=rp-ordermgmt
+Group=rp-ordermgmt
+WorkingDirectory=/opt/order-mgmt-orchestrator/current
+EnvironmentFile=/etc/ordermgmt/sales-brief.env
+ExecStart=/usr/bin/node /opt/order-mgmt-orchestrator/current/scripts/sales-brief-report.mjs
+UMask=0077
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=order-mgmt-sales-brief
+
+# Delivery recovery is timer/operator driven. Never service-restart an
+# ambiguous external send; its ledger state must be reconciled first.
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

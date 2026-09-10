@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-critical: #d32f2f;
+  --color-critical-bg: #ffebee;
+  --color-warning: #f57c00;
+  --color-warning-bg: #fff3e0;
+  --color-info: #1976d2;
+  --color-info-bg: #e3f2fd;
+  --color-success: #388e3c;
+  --color-success-bg: #e8f5e9;
+  --color-payment: #4527a0;
+  --color-payment-bg: #ede7f6;
+  --color-neutral: #757575;
+  --color-accent: #1565c0;
+  --color-accent-hover: #0d47a1;
+}
+
+@layer base {
+  body {
+    @apply dark:bg-gray-950 dark:text-gray-100;
+  }
+}

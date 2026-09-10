@@ -1,0 +1,249 @@
+#!/usr/bin/env bash
+# rp-repo-housekeeping - check repo hygiene after deployment
+# Default is informational. Reports to GitHub Actions job summary.
+set -euo pipefail
+
+AFTER_DEPLOY=false
+ENV=""
+SHA=""
+REPO=""
+RUN_URL=""
+JOB_SUMMARY=false
+COMMENT_PR=false
+COMMENT_ISSUE=false
+ARTIFACT=false
+CREATE_FOLLOWUP_ISSUES=false
+DRY_RUN=false
+
+usage() {
+  cat <<-USAGE
+Usage: bin/rp-repo-housekeeping [options]
+
+Check whether the repo is sorted out and ready for the next task.
+Default is informational. Reports to GitHub Actions job summary,
+PR/Issue comments, or artifact. Never committed to the repo.
+
+Options:
+  --after-deploy              Run in post-deploy context
+  --env <name>                Deployment environment
+  --sha <commit-sha>          Deployed commit SHA
+  --repo <owner/repo>         Repository
+  --run-url <url>             GitHub Actions run URL
+  --job-summary               Write to GitHub Actions job summary
+  --comment-pr                Comment on related PR
+  --comment-issue             Comment on related Issue
+  --artifact                  Prepare .tmp report for artifact upload
+  --create-followup-issues    Create follow-up Issues for problems found
+  --dry-run                   Print actions without executing
+  --help                      Show this help
+USAGE
+}
+
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h) usage; exit 0 ;;
+    --after-deploy) AFTER_DEPLOY=true; shift ;;
+    --env) [[ $# -ge 2 ]] || die "--env requires a value"; ENV="$2"; shift 2 ;;
+    --sha) [[ $# -ge 2 ]] || die "--sha requires a value"; SHA="$2"; shift 2 ;;
+    --repo) [[ $# -ge 2 ]] || die "--repo requires a value"; REPO="$2"; shift 2 ;;
+    --run-url) [[ $# -ge 2 ]] || die "--run-url requires a value"; RUN_URL="$2"; shift 2 ;;
+    --job-summary) JOB_SUMMARY=true; shift ;;
+    --comment-pr) COMMENT_PR=true; shift ;;
+    --comment-issue) COMMENT_ISSUE=true; shift ;;
+    --artifact) ARTIFACT=true; shift ;;
+    --create-followup-issues) CREATE_FOLLOWUP_ISSUES=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
+    *) die "Unknown option: $1" ;;
+  esac
+done
+
+[[ -n "$REPO" ]] || die "--repo is required"
+[[ -n "$SHA" ]] || die "--sha is required"
+
+mkdir -p .tmp
+REPORT=".tmp/repo-housekeeping-${SHA}.md"
+
+# --- Detect related PR ---
+RELATED_PR=""
+if [[ -n "${GITHUB_REF:-}" ]] && echo "$GITHUB_REF" | grep -qE 'refs/pull/'; then
+  RELATED_PR=$(echo "$GITHUB_REF" | sed 's|refs/pull/||; s|/merge||')
+fi
+
+# --- Detect related Issue ---
+RELATED_ISSUE=""
+if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1 && [[ -n "$SHA" ]]; then
+  COMMIT_MSG=$(gh api "repos/$REPO/commits/$SHA/commit" --jq '.message' 2>/dev/null || echo "")
+  RELATED_ISSUE=$(echo "$COMMIT_MSG" | grep -oE '#[0-9]+' | head -1 | tr -d '#' || echo "")
+fi
+
+# --- Deployment hygiene ---
+DEPLOY_STATUS="unknown"
+SMOKE_STATUS="unknown"
+DEPLOYED_RECORDED="unknown"
+
+# --- Documentation hygiene ---
+CURRENT_STATE_NEEDED="unknown"
+DECISION_LOG_NEEDED="unknown"
+DATA_MODEL_NEEDED="unknown"
+
+if [[ -f docs/00_CURRENT_STATE.md ]]; then
+  CURRENT_STATE_NEEDED="no"
+  if grep -q 'TBD\|TODO\|<!--' docs/00_CURRENT_STATE.md 2>/dev/null; then
+    CURRENT_STATE_NEEDED="yes (unresolved placeholders)"
+  fi
+fi
+if [[ -f docs/05_DECISION_LOG.md ]]; then
+  DECISION_LOG_NEEDED="no"
+fi
+if [[ -f docs/04_DATA_MODEL.md ]]; then
+  DATA_MODEL_NEEDED="no"
+fi
+
+# --- Repository hygiene ---
+DEBUG_WORKFLOWS=false
+HAS_TEMP_FILES=false
+HAS_BUILD_ARTIFACTS=false
+HAS_TRACKED_TEMP=false
+HAS_UNLINKED_TODO=false
+
+if command -v git &>/dev/null && git rev-parse --git-dir &>/dev/null 2>&1; then
+  if git ls-files '.github/workflows/' 2>/dev/null | grep -qiE 'debug|test-'; then
+    DEBUG_WORKFLOWS=true
+  fi
+  if git ls-files 2>/dev/null | grep -qiE '\.tmp/|/tmp/'; then
+    HAS_TRACKED_TEMP=true
+  fi
+  if git ls-files 2>/dev/null | grep -qiE '/dist/|/build/|/out/'; then
+    HAS_BUILD_ARTIFACTS=true
+  fi
+  TODO_FILES=$(grep -rl 'TODO\|FIXME' --include='*.ts' --include='*.js' --include='*.py' --include='*.sql' --include='*.md' --include='*.yml' --include='*.yaml' . 2>/dev/null | grep -v 'node_modules/' | grep -v '.tmp/' | grep -v '.git/' || true)
+  if [[ -n "$TODO_FILES" ]]; then
+    HAS_UNLINKED_TODO="warn"
+  fi
+fi
+
+# --- Governance hygiene ---
+GOV_CHECKS_PRESENT="unknown"
+GOV_CI_FAILURES_LINKED="unknown"
+BRANCH_RULESET="unknown"
+
+if [[ -f .github/workflows/governance-checks.yml ]] || [[ -f .github/workflows/governance-checks-wrapper.yml ]]; then
+  GOV_CHECKS_PRESENT="yes"
+fi
+
+# --- Readiness ---
+READY="needs review"
+FOLLOWUP_ACTIONS=""
+
+if [[ "$GOV_CHECKS_PRESENT" == "yes" ]] && [[ "$HAS_TRACKED_TEMP" == false ]]; then
+  READY="yes"
+fi
+
+if [[ "$HAS_TRACKED_TEMP" == true ]]; then
+  FOLLOWUP_ACTIONS="${FOLLOWUP_ACTIONS}- Remove tracked temporary files from git\n"
+fi
+if [[ "$CURRENT_STATE_NEEDED" == "yes (unresolved placeholders)" ]]; then
+  FOLLOWUP_ACTIONS="${FOLLOWUP_ACTIONS}- Update docs/00_CURRENT_STATE.md to resolve placeholders\n"
+fi
+if [[ "$HAS_UNLINKED_TODO" == "warn" ]]; then
+  FOLLOWUP_ACTIONS="${FOLLOWUP_ACTIONS}- Review TODO/FIXME items and link to Issues\n"
+fi
+if [[ -z "$FOLLOWUP_ACTIONS" ]]; then
+  FOLLOWUP_ACTIONS="- None"
+fi
+
+# --- Build report ---
+cat > "$REPORT" <<-REPORT_BODY
+# Repo Housekeeping
+
+## Deployment Hygiene
+- Deploy status: $DEPLOY_STATUS
+- Smoke test: $SMOKE_STATUS
+- Deployed target recorded: $DEPLOYED_RECORDED
+
+## Issue / PR Hygiene
+- Related PR: ${RELATED_PR:-not detected}
+- Related Issue: ${RELATED_ISSUE:-not detected}
+- Issue can be closed: unknown (v1 — manual review)
+- Follow-up Issues created: not needed (v1)
+
+## Documentation Hygiene
+- CURRENT_STATE update needed: $CURRENT_STATE_NEEDED
+- DECISION_LOG update needed: $DECISION_LOG_NEEDED
+- DATA_MODEL update needed: $DATA_MODEL_NEEDED
+
+## Repository Hygiene
+- Debug workflows present: $DEBUG_WORKFLOWS
+- Temporary files committed: $HAS_TRACKED_TEMP
+- Build artifacts committed: $HAS_BUILD_ARTIFACTS
+- TODO/FIXME without linked Issue: $HAS_UNLINKED_TODO
+
+## Governance Hygiene
+- Governance Checks enabled: $GOV_CHECKS_PRESENT
+- Known CI failures linked to Issues: $GOV_CI_FAILURES_LINKED
+- Branch ruleset status: $BRANCH_RULESET
+
+## Readiness
+- Repo ready for next task: $READY
+- Follow-up actions:
+$(printf '%b' "$FOLLOWUP_ACTIONS" | sed 's/^/  /')
+REPORT_BODY
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo "[DRY-RUN] Report generated: $REPORT"
+  echo "[DRY-RUN] Would write to job summary: $JOB_SUMMARY"
+  echo "[DRY-RUN] Would comment on PR: $COMMENT_PR"
+  echo "[DRY-RUN] Would comment on Issue: $COMMENT_ISSUE"
+  echo "[DRY-RUN] Would prepare artifact: $ARTIFACT"
+  echo "[DRY-RUN] Would create follow-up Issues: $CREATE_FOLLOWUP_ISSUES"
+  cat "$REPORT"
+  exit 0
+fi
+
+# --- Write to GitHub Actions job summary ---
+if [[ "$JOB_SUMMARY" == true ]] && [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+  cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+  echo "Report appended to \$GITHUB_STEP_SUMMARY"
+fi
+
+# --- Comment on related PR ---
+if [[ "$COMMENT_PR" == true ]] && [[ -n "$RELATED_PR" ]]; then
+  if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+    gh pr comment "$RELATED_PR" --repo "$REPO" --body "$(cat "$REPORT")" 2>/dev/null && echo "Commented on PR #$RELATED_PR" || echo "Warning: could not comment on PR #$RELATED_PR"
+  fi
+fi
+
+# --- Comment on related Issue ---
+if [[ "$COMMENT_ISSUE" == true ]] && [[ -n "$RELATED_ISSUE" ]]; then
+  if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+    gh issue comment "$RELATED_ISSUE" --repo "$REPO" --body "$(cat "$REPORT")" 2>/dev/null && echo "Commented on Issue #$RELATED_ISSUE" || echo "Warning: could not comment on Issue #$RELATED_ISSUE"
+  fi
+fi
+
+# --- Create follow-up Issues ---
+if [[ "$CREATE_FOLLOWUP_ISSUES" == true ]]; then
+  if [[ "$CURRENT_STATE_NEEDED" == "yes (unresolved placeholders)" ]]; then
+    echo "[DRY-RUN only in v1] Would create Issue for CURRENT_STATE update"
+  fi
+  if [[ "$HAS_TRACKED_TEMP" == true ]]; then
+    echo "[DRY-RUN only in v1] Would create Issue for tracked temp files"
+  fi
+  echo "Follow-up Issue creation is DRY-RUN only in v1."
+fi
+
+# --- Prepare artifact ---
+if [[ "$ARTIFACT" == true ]]; then
+  echo "Artifact ready: $REPORT"
+  echo "Upload via: actions/upload-artifact@v4"
+  echo "  name: repo-housekeeping-$SHA"
+  echo "  path: $REPORT"
+fi
+
+echo ""
+echo "Housekeeping report: $REPORT"
+echo "Reports are not committed. Use --artifact to upload as a GitHub Actions artifact."
