@@ -80,6 +80,13 @@ sync_one() {
   mkdir -p "$dst"
   rsync -a --delete "${COMMON_RSYNC_EXCLUDES[@]}" "$src/" "$dst/"
 
+  # These Inquiry root docs describe the retired Baserow/Python architecture
+  # as current. Keep that history in the private source repo, not in the new
+  # monorepo where agents could mistake it for operating guidance.
+  if [[ "$app" == "inquiry" ]]; then
+    rm -f "$dst/REFACTOR-WORKER.md" "$dst/ROADMAP.md"
+  fi
+
   # ticket-handling Baserow is retired; executable migration tooling stays in
   # the original private repo/history rather than becoming active monorepo code.
   if [[ "$app" == "tickets" ]]; then
@@ -119,11 +126,12 @@ if find "$ROOT/apps" -type f \
 fi
 
 # Inquiry and Tickets have retired Baserow as runtime architecture. Historical
-# docs/migrations/tests may mention Baserow, but live runtime trees must not
-# re-add it.
+# documentation may mention Baserow, but executable/config runtime trees must
+# not re-add it. Stale root operating docs are explicitly removed above.
 BASEROW_PATTERN='(api\.baserow\.io|BASEROW_(API_)?TOKEN|BASEROW_DATABASE_TOKEN)'
 for app in inquiry tickets; do
   if find "$ROOT/apps/$app" -type f \
+      ! -name '*.md' \
       ! -path '*/docs/*' \
       ! -path '*/supabase/migrations/*' \
       ! -path '*test*' \
