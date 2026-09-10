@@ -87,10 +87,13 @@ sync_one() {
     rm -f "$dst/REFACTOR-WORKER.md" "$dst/ROADMAP.md"
   fi
 
-  # ticket-handling Baserow is retired; executable migration tooling stays in
-  # the original private repo/history rather than becoming active monorepo code.
+  # ticket-handling Baserow is retired. Keep executable migration tooling and
+  # the old Baserow/inline-SPA architecture report in the private source
+  # repository/history rather than importing them as apparent current guidance.
   if [[ "$app" == "tickets" ]]; then
-    rm -f "$dst/scripts/migrate_baserow_ticket_pipeline.py"
+    rm -f \
+      "$dst/scripts/migrate_baserow_ticket_pipeline.py" \
+      "$dst/TicketHandling架构分析报告.md"
   fi
 
   printf '%s\n' "$repo@$actual" > "$dst/.source-revision"
