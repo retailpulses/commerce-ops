@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SOURCE_DIR="$ROOT/local-env/supabase"
+RUNTIME_DIR="$ROOT/.tmp/local-env"
+PROJECT_ID="commerce_ops_inquiry_local"
+DB_CONTAINER="supabase_db_$PROJECT_ID"
+
+# This workflow is local-only. Do not allow inherited hosted-project settings
+# to become an accidental control path now or after future CLI changes.
+unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID
+
+usage() {
+  echo "Usage: ./scripts/local-env start|reset|smoke|status|stop|destroy|measure|check-bindings"
+}
+
+require_prerequisites() {
+  command -v docker >/dev/null 2>&1 || { echo "ERROR: Docker CLI is not installed." >&2; exit 1; }
+  docker info >/dev/null 2>&1 || { echo "ERROR: Docker Desktop is not running." >&2; exit 1; }
+  command -v supabase >/dev/null 2>&1 || { echo "ERROR: Supabase CLI is not installed." >&2; exit 1; }
+}
+
+prepare_runtime() {
+  if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/local-env" ]]; then
+    echo "ERROR: refusing to prepare unexpected runtime path." >&2
+    exit 1
+  fi
+  rm -rf "$RUNTIME_DIR"
+  mkdir -p "$RUNTIME_DIR/supabase/migrations"
+  cp "$SOURCE_DIR/config.toml" "$RUNTIME_DIR/supabase/config.toml"
+  cp "$SOURCE_DIR/seed.sql" "$RUNTIME_DIR/supabase/seed.sql"
+  cp "$SOURCE_DIR/local_dependency_contract.sql" \
+    "$RUNTIME_DIR/supabase/migrations/20260720000000_local_dependency_contract.sql"
+  cp "$ROOT"/apps/inquiry/supabase/migrations/*.sql "$RUNTIME_DIR/supabase/migrations/"
+}
+
+run_smoke() {
+  docker inspect "$DB_CONTAINER" >/dev/null 2>&1 || {
+    echo "ERROR: local Inquiry database is not running; run start first." >&2
+    exit 1
+  }
+  docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres < "$SOURCE_DIR/smoke.sql"
+}
+
+wildcard_bindings() {
+  docker inspect \
+    --format '{{range $port, $bindings := .NetworkSettings.Ports}}{{range $bindings}}{{if or (eq .HostIp "0.0.0.0") (eq .HostIp "::")}}{{$.Name}} {{$port}} -> {{.HostIp}}:{{.HostPort}}{{println}}{{end}}{{end}}{{end}}' \
+    "supabase_kong_$PROJECT_ID" "$DB_CONTAINER" 2>/dev/null | sed '/^[[:space:]]*$/d'
+}
+
+check_bindings() {
+  local exposed
+  exposed="$(wildcard_bindings)"
+  if [[ -z "$exposed" ]]; then
+    echo "Local Supabase published ports are loopback-only."
+    return 0
+  fi
+
+  echo "WARNING: Supabase CLI published local endpoints on wildcard interfaces:" >&2
+  echo "$exposed" >&2
+  if [[ "${LOCAL_ENV_ALLOW_WILDCARD_BINDINGS:-}" == "1" ]]; then
+    echo "Explicit wildcard-binding override accepted; host firewall or isolated network is required." >&2
+    return 0
+  fi
+
+  echo "ERROR: refusing to leave the local environment network-accessible." >&2
+  echo "Supabase CLI 2.109.1 has no per-project bind-address setting." >&2
+  echo "Configure a host firewall/trusted isolated network, then explicitly run:" >&2
+  echo "  LOCAL_ENV_ALLOW_WILDCARD_BINDINGS=1 make local-env-start" >&2
+  return 1
+}
+
+start() {
+  require_prerequisites
+  if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
+    echo "Local Inquiry environment is already running."
+  else
+    prepare_runtime
+    /usr/bin/time -p supabase start --workdir "$RUNTIME_DIR"
+  fi
+  if ! check_bindings; then
+    supabase stop --no-backup --workdir "$RUNTIME_DIR" >/dev/null
+    rm -rf "$RUNTIME_DIR"
+    exit 1
+  fi
+  run_smoke
+}
+
+reset() {
+  require_prerequisites
+  docker inspect "$DB_CONTAINER" >/dev/null 2>&1 || {
+    echo "ERROR: local Inquiry environment is not running; run start first." >&2
+    exit 1
+  }
+  check_bindings
+  prepare_runtime
+  /usr/bin/time -p supabase db reset --local --workdir "$RUNTIME_DIR"
+  run_smoke
+}
+
+stop_env() {
+  require_prerequisites
+  if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
+    supabase stop --workdir "$RUNTIME_DIR"
+  else
+    echo "Local Inquiry environment is already stopped."
+  fi
+}
+
+destroy() {
+  require_prerequisites
+  if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
+    supabase stop --no-backup --workdir "$RUNTIME_DIR"
+  fi
+  if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/local-env" ]]; then
+    echo "ERROR: refusing to remove unexpected runtime path." >&2
+    exit 1
+  fi
+  rm -rf "$RUNTIME_DIR"
+  if docker ps -a --format '{{.Names}}' | grep -Fxq "$DB_CONTAINER"; then
+    echo "ERROR: database container still exists after destroy." >&2
+    exit 1
+  fi
+  echo "Local Inquiry environment destroyed cleanly."
+}
+
+measure() {
+  require_prerequisites
+  docker inspect "$DB_CONTAINER" >/dev/null 2>&1 || {
+    echo "ERROR: local Inquiry environment is not running; run start first." >&2
+    exit 1
+  }
+  docker stats --no-stream --format '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.BlockIO}}' \
+    $(docker ps -q --filter "label=com.supabase.cli.project=$PROJECT_ID")
+  docker system df -v | awk -v volume="supabase_db_$PROJECT_ID" '$1 == volume { print $0 }'
+}
+
+case "${1:-}" in
+  start) start ;;
+  reset) reset ;;
+  smoke) require_prerequisites; run_smoke ;;
+  status) require_prerequisites; supabase status --workdir "$RUNTIME_DIR" ;;
+  stop) stop_env ;;
+  destroy) destroy ;;
+  measure) measure ;;
+  check-bindings) require_prerequisites; check_bindings ;;
+  *) usage; exit 2 ;;
+esac
