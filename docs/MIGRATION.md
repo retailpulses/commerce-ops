@@ -1,6 +1,6 @@
 # Commerce Ops migration
 
-Status: Phase 1 in progress
+Status: Phase 1 source consolidation complete; Phase 2 production cutover pending
 
 Program SSOT: `retailpulses/inbox#100`
 
@@ -134,20 +134,28 @@ While `commerce-ops` is public:
 - [x] Public-repository/private-source import safety rule is documented.
 - [x] Baserow legacy classification is defined across Orders, Tickets, and Inquiry.
 - [x] Secret/environment migration strategy and deployment gate are documented.
-- [ ] Sanitized current-tree snapshot of Ops Portal imported under `apps/ops-portal`.
-- [ ] Sanitized current-tree snapshot of Inquiry imported under `apps/inquiry`.
-- [ ] Sanitized current-tree snapshot of Orders imported under `apps/orders`.
-- [ ] Sanitized current-tree snapshot of Tickets imported under `apps/tickets`.
-- [ ] Source revision/provenance recorded for each imported app.
-- [ ] Existing builds/tests pass from new paths.
-- [ ] Path-scoped CI checks are installed without changing production deploy targets.
-- [ ] Required GitHub repository secrets/variables/environments/permissions are inventoried and mapped to source ownership; no secret values are documented.
-- [ ] Runtime-scoped secret locations (Cloudflare/VPS/provider) are confirmed unchanged for initial cutover.
-- [ ] Production deployment workflows remain disabled/manual-only until the secret/environment gate is complete.
-- [ ] Old repositories remain active and unarchived.
+- [x] Sanitized current-tree snapshot of Ops Portal imported under `apps/ops-portal`.
+- [x] Sanitized current-tree snapshot of Inquiry imported under `apps/inquiry`.
+- [x] Sanitized current-tree snapshot of Orders imported under `apps/orders`.
+- [x] Sanitized current-tree snapshot of Tickets imported under `apps/tickets`.
+- [x] Source revision/provenance recorded for each imported app.
+- [x] Existing builds/tests pass from new paths.
+- [x] Path-scoped CI checks are installed without changing production deploy targets.
+- [x] Production deployment workflows remain disabled until the secret/environment gate is complete.
+- [x] Old repositories remain active and unarchived.
+
+Phase 1 source consolidation completed on 2026-09-10 via `commerce-ops#26`
+and `commerce-ops#28`. New engineering changes should originate in this
+repository. Until Phase 2 cuts over each production surface, emergency
+production fixes must be mirrored between this repository and the applicable
+legacy deployment-authority repository to prevent divergence.
 
 ## Phase 2 gate
 
-Do not start production ownership cutover until every imported app can build/test from `commerce-ops`, source-to-target provenance is recorded, and the secret/environment migration gate is complete.
+Do not start production ownership cutover until the remaining gates are complete:
+
+- [ ] Required GitHub repository secrets/variables/environments/permissions are inventoried and mapped to source ownership; no secret values are documented.
+- [ ] Runtime-scoped secret locations (Cloudflare/VPS/provider) are confirmed unchanged for initial cutover.
+- [ ] Each independently deployable surface proves exact-SHA deploy, smoke checks, and rollback from `commerce-ops`.
 
 Staging remains after source consolidation and production-source parity, as defined in the program issue.
