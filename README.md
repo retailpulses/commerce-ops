@@ -36,7 +36,7 @@ the secret/environment, exact-SHA deploy, smoke, and rollback gates.
 
 See `docs/MIGRATION.md` for the migration plan and acceptance criteria.
 
-## Disposable local Inquiry environment
+## Disposable local Commerce Ops staging
 
 With Docker Desktop running and Supabase CLI installed:
 
@@ -46,6 +46,8 @@ make local-env-reset
 make local-env-destroy
 ```
 
-This uses only synthetic data and local Docker resources. See
+This assembles the canonical RPagentOS, Inquiry, Tickets, and Orders database
+streams, runs synthetic cross-domain acceptance, and uses only local Docker
+resources. It starts no application schedule or external-write adapter. See
 [`docs/LOCAL_STAGING_POC.md`](docs/LOCAL_STAGING_POC.md) for safety boundaries,
 migration ownership gaps, measurements, and the full command set.

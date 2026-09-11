@@ -6,7 +6,7 @@ RUNTIME_DIR="$ROOT/.tmp/cross-domain-local"
 MIGRATIONS_DIR="$RUNTIME_DIR/supabase/migrations"
 OWNER_CACHE="$RUNTIME_DIR/owners/RPagentOS"
 RPAGENTOS_REPO="https://github.com/retailpulses/RPagentOS.git"
-RPAGENTOS_SHA="6bb5ee7a1da850f3f76b0b3399e75a5ebc3aa61f"
+RPAGENTOS_SHA="cdb1f936c210744f8ed604c3cecc075e58083d5e"
 COMMERCE_SHA="$(git -C "$ROOT" rev-parse HEAD)"
 
 unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID
@@ -49,7 +49,9 @@ git -C "$ROOT" diff --cached --quiet -- \
 
 QUEUE="$RUNTIME_DIR/assembly-queue.tsv"
 MANIFEST="$RUNTIME_DIR/assembly-manifest.tsv"
+EXCLUSIONS="$RUNTIME_DIR/assembly-exclusions.tsv"
 : > "$QUEUE"
+printf 'owner\tsource_path\treason\n' > "$EXCLUSIONS"
 
 add_stream() {
   local owner="$1"
@@ -62,6 +64,16 @@ add_stream() {
     [[ "$executable" != "0" ]] || continue
 
     case "$mode:$name" in
+      rpagentos:20260824080100_seed_mercari_monthly_metrics.sql)
+        printf '%s\t%s\t%s\n' "$owner" "supabase/migrations/$name" \
+          "production-derived data migration; local staging is synthetic-only" >> "$EXCLUSIONS"
+        continue
+        ;;
+      rpagentos:20260905090000_shop4_listing_prices.sql)
+        printf '%s\t%s\t%s\n' "$owner" "supabase/migrations/$name" \
+          "production listing identities/prices excluded; schema portion supplied by explicit local contract step" >> "$EXCLUSIONS"
+        continue
+        ;;
       rpagentos:*) ;;
       tickets:0001_*) key="20260708500000" ;;
       tickets:0002_*) key="20260708500002" ;;
@@ -103,6 +115,10 @@ printf '%s\t%s\t%s\t%s\n' \
   "20260711999999" "local-assembly#6" \
   "20260711999999_ticket_product_view_rebuild.sql" \
   "$ROOT/local-env/cross-domain/compat/20260711999999_ticket_product_view_rebuild.sql" >> "$QUEUE"
+printf '%s\t%s\t%s\t%s\n' \
+  "20260905089999" "local-assembly#6" \
+  "20260905089999_shop4_listing_price_schema_contract.sql" \
+  "$ROOT/local-env/cross-domain/compat/20260905089999_shop4_listing_price_schema_contract.sql" >> "$QUEUE"
 
 {
   printf 'local_sequence\toriginal_order_key\towner\tsource_path\tsha256\n'
@@ -123,6 +139,18 @@ printf '%s\t%s\t%s\t%s\n' \
   done < <(LC_ALL=C sort -t $'\t' -k1,1 -k2,2 -k3,3 "$QUEUE")
 } > "$MANIFEST"
 
-echo "Prepared $(($(wc -l < "$MANIFEST") - 1)) canonical owner migrations."
+cat > "$RUNTIME_DIR/release.env" <<EOF
+LOCAL_ENVIRONMENT=commerce_ops_cross_domain_local
+COMMERCE_OPS_REVISION=$COMMERCE_SHA
+RPAGENTOS_REVISION=$RPAGENTOS_SHA
+MIGRATION_MANIFEST_SHA256=$(shasum -a 256 "$MANIFEST" | awk '{print $1}')
+SYNTHETIC_ONLY=true
+OUTBOUND_ENABLED=false
+SCHEDULES_ENABLED=false
+EOF
+
+echo "Prepared $(($(wc -l < "$MANIFEST") - 1)) ordered migration/contract steps."
 echo "Runtime: $RUNTIME_DIR"
 echo "Manifest: $MANIFEST"
+echo "Synthetic-safety exclusions: $EXCLUSIONS"
+echo "Release identity: $RUNTIME_DIR/release.env"
