@@ -54,10 +54,13 @@ function parseInquiryIds(url: URL): number[] | undefined {
 }
 
 async function handleHealth(env: Env): Promise<Response> {
+  const releaseSha = env.RELEASE_SHA?.trim().toLowerCase() ?? "";
   return new Response(
     JSON.stringify({
       ok: true,
       name: "inquiry-automation-worker",
+      environment: env.ENVIRONMENT?.trim() || "unknown",
+      commerce_ops_sha: /^[0-9a-f]{40}$/.test(releaseSha) ? releaseSha : "unknown",
       version: "0.1.0",
       dryRun: getConfig(env).runtime.dryRun,
     }),

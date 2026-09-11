@@ -1,4 +1,7 @@
 export interface Env {
+  /** Exact commerce-ops commit injected by the production deploy. */
+  RELEASE_SHA?: string;
+  ENVIRONMENT?: string;
   SHOP_CACHE: KVNamespace;
   JOB_STATE: DurableObjectNamespace<import("./state/JobStateDO").JobStateDO>;
 
