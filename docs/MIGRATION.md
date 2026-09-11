@@ -1,6 +1,6 @@
 # Commerce Ops migration
 
-Status: Phase 1 source consolidation complete; Phase 2 production cutover pending
+Status: Phase 1 complete; Phase 2 production cutover in progress (`#13`)
 
 Program SSOT: `retailpulses/inbox#100`
 
@@ -158,4 +158,6 @@ Do not start production ownership cutover until the remaining gates are complete
 - [ ] Runtime-scoped secret locations (Cloudflare/VPS/provider) are confirmed unchanged for initial cutover.
 - [ ] Each independently deployable surface proves exact-SHA deploy, smoke checks, and rollback from `commerce-ops`.
 
-Staging remains after source consolidation and production-source parity, as defined in the program issue.
+Local staging is the default integration gate and is already complete. Current
+production topology and per-runtime cutover evidence are maintained in
+`PRODUCTION_RUNTIME_INVENTORY.md`.
