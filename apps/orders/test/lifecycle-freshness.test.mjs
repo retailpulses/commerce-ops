@@ -1,9 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateFreshness, parseFreshnessScopes } from "../src/lib/lifecycle-freshness.mjs";
+import { evaluateFreshness, MERCARI_FRESHNESS_SCOPES, parseFreshnessScopes } from "../src/lib/lifecycle-freshness.mjs";
 import { normalizeMercariLifecycleStatus } from "../src/lib/lifecycle-reconciler.mjs";
 
 const NOW = new Date("2026-09-07T00:00:00.000Z");
+
+test("default Mercari freshness scopes use the four production store identities", () => {
+  assert.deepEqual(MERCARI_FRESHNESS_SCOPES, [
+    "mercari:wmyisfmhbgwyvapewsfirn",
+    "mercari:zamygwzp6hudgdh5e9adob",
+    "mercari:2jgrmzqojnbmfdwrtp2xk3",
+    "mercari:2jmlhbxjifhdr55jmwa7fs",
+  ]);
+});
 
 test("freshness accepts complete observations inside SLA", () => {
   const result = evaluateFreshness([{
