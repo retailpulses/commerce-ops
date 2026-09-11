@@ -35,9 +35,33 @@ Do not change production URLs, Cloudflare project/Worker identities, VPS service
 
 See `docs/BASEROW_RETIREMENT.md`.
 
+## Staging-aware planning
+
+Local-first staging is an established repository capability. Before implementing a bug fix, feature, migration, scheduler/runtime change, or cross-domain change, the implementation plan must classify the **lowest sufficient validation level**:
+
+- `NONE` — documentation or other change with no executable behavior impact.
+- `LOCAL_TEST` — unit/type/build/static validation is sufficient.
+- `DOMAIN_STAGING` — run the affected domain against the disposable local staging environment.
+- `CROSS_DOMAIN_STAGING` — run the relevant synthetic cross-domain flow in local staging.
+- `PRODUCTION_CANARY` — a production-only boundary remains after all reproducible local validation is complete.
+
+Changes involving database state, lifecycle/status transitions, reconciliation, schedulers/timers, retries/idempotency, cross-domain contracts, or external-write intent must explicitly consider local staging.
+
+Every implementation plan must state:
+
+- staging classification;
+- what will be validated locally;
+- what cannot be validated locally;
+- residual production-only risk;
+- whether a production canary is required.
+
+Prefer the lowest sufficient level; do **not** require full staging for trivial changes. If an important boundary cannot be reproduced locally, validate everything reproducible locally first, then identify the residual risk and use the smallest possible production canary. Production is not the default integration-test environment.
+
+See `docs/STAGING_ENVIRONMENT_PLAN.md` and the root `make local-env-*` commands.
+
 ## Shared packages
 
-Do not extract shared platform clients, auth, messaging, UI or other packages merely because similar code exists in multiple imported apps. First prove source/build/runtime parity and establish staging. Shared packages require a separate issue/PR with an explicit owner and compatibility contract.
+Do not extract shared platform clients, auth, messaging, UI or other packages merely because similar code exists in multiple apps. Shared packages require a separate issue/PR with an explicit owner and compatibility contract.
 
 ## Public repository safety
 
@@ -67,5 +91,3 @@ Use Issue → branch → PR → review/verification. Architecture-affecting chan
 - secrets/permissions impact;
 - external platform impact;
 - rollback plan.
-
-Phase 1 program coordination remains `retailpulses/inbox#100`; source import execution is tracked in `commerce-ops#3`.
