@@ -22,6 +22,8 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createBaserowClient } from "../src/lib/db.mjs";
 import { claimExternalOperation, finalizeExternalOperation, hashExternalOperationPayload } from "../src/lib/external-operation-ledger.mjs";
 import { MERCARI_FRESHNESS_SCOPES, requireLifecycleFreshness } from "../src/lib/lifecycle-freshness.mjs";
@@ -528,7 +530,19 @@ async function main() {
   if (!result.ok) process.exitCode = result.completion_state === "blocked_by_freshness" ? 2 : 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// systemd executes the immutable release through its `current` symlink. Node
+// resolves import.meta.url to the release path, while argv[1] retains the
+// symlink path, so compare canonical filesystem paths rather than URL text.
+export function isDirectSalesBriefExecution(moduleUrl = import.meta.url, entryPath = process.argv[1]) {
+  if (!entryPath) return false;
+  try {
+    return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(entryPath);
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectSalesBriefExecution()) {
   main().catch(err => {
     console.error(`[sales-brief] FATAL: ${err.stack || err}`);
     process.exit(1);
