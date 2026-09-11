@@ -1,11 +1,27 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, symlink } from "node:fs/promises";
 import test from "node:test";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 process.env.SUPABASE_URL ||= "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= "test-key";
 process.env.WECOM_WEBHOOK_URL ||= "https://example.invalid/webhook";
 
-const { buildSummary, classify, revenue, classifySalesBriefSendFailure, resolveSalesBriefDeliverySlot, runSalesBrief } = await import("../scripts/sales-brief-report.mjs");
+const { buildSummary, classify, isDirectSalesBriefExecution, revenue, classifySalesBriefSendFailure, resolveSalesBriefDeliverySlot, runSalesBrief } = await import("../scripts/sales-brief-report.mjs");
+
+test("sales brief entrypoint recognizes an immutable-release current symlink", async () => {
+  const target = fileURLToPath(new URL("../scripts/sales-brief-report.mjs", import.meta.url));
+  const directory = await mkdtemp(join(tmpdir(), "sales-brief-current-"));
+  const currentPath = join(directory, basename(target));
+  try {
+    await symlink(target, currentPath);
+    assert.equal(isDirectSalesBriefExecution(new URL(`file://${target}`).href, currentPath), true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("Rakuten pending confirmation is recognized sales", () => {
   const row = {
