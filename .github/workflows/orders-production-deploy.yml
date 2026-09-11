@@ -1,0 +1,112 @@
+name: Orders production deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact merged commerce-ops SHA
+        required: true
+        type: string
+      surface:
+        description: Independently deployable surface
+        required: true
+        type: choice
+        options: [worker, vps-portal]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orders-production-${{ inputs.surface }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, ref: "${{ inputs.release_sha }}" }
+      - name: Require exact merged main SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ inputs.release_sha }}"
+          echo "${{ inputs.release_sha }}" | grep -Eq '^[0-9a-f]{40}$'
+          git fetch origin main
+          git merge-base --is-ancestor "${{ inputs.release_sha }}" origin/main
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - working-directory: apps/orders
+        run: npm ci && npm test && npm run build && npm run check
+      - if: inputs.surface == 'vps-portal'
+        working-directory: apps/orders/portal
+        run: npm ci && npm test && npm run lint && npm run build
+      - if: inputs.surface == 'vps-portal'
+        working-directory: apps/orders/portal-api
+        run: npm ci && npm test && npm run check
+
+  deploy-worker:
+    if: inputs.surface == 'worker'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    defaults: { run: { working-directory: apps/orders } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.release_sha }}" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: Deploy existing Worker identity; preserve runtime secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --var "RELEASE_VERSION:${{ inputs.release_sha }}"
+      - name: Exact-SHA smoke
+        run: curl -fsS https://rp-order-mgmt.jim-yang-3c5.workers.dev/health | jq -e --arg sha "${{ inputs.release_sha }}" '.ok == true and .release_version == $sha'
+
+  deploy-vps-portal:
+    if: inputs.surface == 'vps-portal'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.release_sha }}" }
+      - name: Build portal artifact
+        working-directory: apps/orders/portal
+        run: npm ci && npm run build
+      - name: Package exact monorepo subtree
+        run: tar --exclude='node_modules' -czf orders-release.tgz apps/orders
+      - name: Upload exact monorepo subtree
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: orders-release.tgz
+          target: /tmp
+      - name: Install immutable release without moving runtime secrets
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -eu
+            sha='${{ inputs.release_sha }}'
+            release="/opt/order-mgmt/releases/$sha"
+            test -f /opt/order-mgmt/.env
+            test ! -e "$release"
+            old=$(readlink -f /opt/order-mgmt/current || true)
+            test -n "$old"
+            mkdir -p "$release"
+            tar -xzf /tmp/orders-release.tgz --strip-components=2 -C "$release"
+            rm -f /tmp/orders-release.tgz
+            test -f "$release/portal-api/src/server.mjs"
+            cd "$release/portal-api" && npm ci --omit=dev
+            printf '%s\n' "$old" > /opt/order-mgmt/.previous-release
+            ln -sfn "$release" /opt/order-mgmt/current.next
+            mv -Tf /opt/order-mgmt/current.next /opt/order-mgmt/current
+            sed -i "/^RELEASE_SHA=/d;/^RELEASE_BUILT_AT=/d" /opt/order-mgmt/.env
+            printf 'RELEASE_SHA=%s\nRELEASE_BUILT_AT=%s\n' "$sha" "$(date -u +%FT%TZ)" >> /opt/order-mgmt/.env
+            systemctl restart rp-order-mgmt-api.service
+            curl -fsS http://127.0.0.1:8790/api/release | jq -e --arg sha "$sha" '.release_sha == $sha'
