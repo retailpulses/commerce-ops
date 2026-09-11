@@ -61,8 +61,7 @@ export async function requireLifecycleFreshness(supabase, options = {}) {
 
 export const MERCARI_FRESHNESS_SCOPES = Object.freeze([
   "mercari:wmyisfmhbgwyvapewsfirn",
-  "mercari:zamyqwzp6hudgdh5e9adob",
+  "mercari:zamygwzp6hudgdh5e9adob",
   "mercari:2jgrmzqojnbmfdwrtp2xk3",
   "mercari:2jmlhbxjifhdr55jmwa7fs",
 ]);
-
