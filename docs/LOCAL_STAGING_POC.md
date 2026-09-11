@@ -148,16 +148,20 @@ logical database values are the relevant disposable data footprint.
 
 ## Implications for hosted staging and PR #33
 
-This POC validates the local lifecycle and Inquiry-owned SQL, but does not close
-the hosted staging migration gate. `docs/STAGING_ENVIRONMENT_PLAN.md` / PR #33
-should retain the dedicated Supabase project requirement and add an explicit
-owner-ordered database assembly deliverable:
+This POC validates the local lifecycle and Inquiry-owned SQL. The next
+local-first step is the owner-ordered database assembly documented in
+[`CROSS_DOMAIN_DATABASE_ASSEMBLY.md`](CROSS_DOMAIN_DATABASE_ASSEMBLY.md):
 
-- obtain the canonical RPagentOS catalog baseline and migration history;
+- use the pinned canonical RPagentOS catalog migration history;
 - define collision-free cross-repository migration identities/order without
   renaming already-applied hosted history casually;
-- replay Inquiry against the real owner migrations, then Tickets and Orders as
-  separately owned streams;
+- replay Inquiry, Tickets, and Orders as separately owned streams against that
+  owner baseline;
 - keep domain-specific principals and external writes physically unavailable;
-- treat this synthetic POC as developer feedback, not production-source parity
-  or hosted runtime acceptance evidence.
+- treat this synthetic POC as local developer evidence, not production-source
+  parity or hosted runtime acceptance evidence.
+
+The current assembly is blocked because RPagentOS migrations omit catalog
+columns and a pricing function that later owner SQL assumes already exist. That
+gap must be fixed by the catalog owner rather than hidden by an Inquiry or
+commerce-ops compatibility table.

@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUNTIME_DIR="$ROOT/.tmp/cross-domain-local"
+MIGRATIONS_DIR="$RUNTIME_DIR/supabase/migrations"
+OWNER_CACHE="$RUNTIME_DIR/owners/RPagentOS"
+RPAGENTOS_REPO="https://github.com/retailpulses/RPagentOS.git"
+RPAGENTOS_SHA="6bb5ee7a1da850f3f76b0b3399e75a5ebc3aa61f"
+COMMERCE_SHA="$(git -C "$ROOT" rev-parse HEAD)"
+
+unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID
+
+if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/cross-domain-local" ]]; then
+  echo "ERROR: refusing unexpected runtime path." >&2
+  exit 1
+fi
+
+rm -rf "$RUNTIME_DIR"
+mkdir -p "$MIGRATIONS_DIR" "$RUNTIME_DIR/owners"
+cp "$ROOT/local-env/cross-domain/config.toml" "$RUNTIME_DIR/supabase/config.toml"
+
+if [[ -n "${RPAGENTOS_SOURCE_DIR:-}" ]]; then
+  test -d "$RPAGENTOS_SOURCE_DIR/.git" || {
+    echo "ERROR: RPAGENTOS_SOURCE_DIR is not a Git checkout." >&2
+    exit 1
+  }
+  test "$(git -C "$RPAGENTOS_SOURCE_DIR" rev-parse HEAD)" = "$RPAGENTOS_SHA" || {
+    echo "ERROR: RPAGENTOS_SOURCE_DIR is not pinned at $RPAGENTOS_SHA." >&2
+    exit 1
+  }
+  git -C "$RPAGENTOS_SOURCE_DIR" diff --quiet -- supabase/migrations
+  git -C "$RPAGENTOS_SOURCE_DIR" diff --cached --quiet -- supabase/migrations
+  OWNER_SOURCE="$RPAGENTOS_SOURCE_DIR"
+else
+  git clone --quiet --no-checkout --filter=blob:none "$RPAGENTOS_REPO" "$OWNER_CACHE"
+  git -C "$OWNER_CACHE" checkout --quiet --detach "$RPAGENTOS_SHA"
+  OWNER_SOURCE="$OWNER_CACHE"
+fi
+
+git -C "$ROOT" diff --quiet -- \
+  apps/inquiry/supabase/migrations \
+  apps/orders/supabase/migrations \
+  apps/tickets/supabase/migrations
+git -C "$ROOT" diff --cached --quiet -- \
+  apps/inquiry/supabase/migrations \
+  apps/orders/supabase/migrations \
+  apps/tickets/supabase/migrations
+
+QUEUE="$RUNTIME_DIR/assembly-queue.tsv"
+MANIFEST="$RUNTIME_DIR/assembly-manifest.tsv"
+: > "$QUEUE"
+
+add_stream() {
+  local owner="$1"
+  local directory="$2"
+  local mode="$3"
+  local file name version key executable
+  for file in "$directory"/*.sql; do
+    name="$(basename "$file")"
+    executable="$(sed '/^[[:space:]]*--/d;/^[[:space:]]*$/d' "$file" | wc -l | tr -d ' ')"
+    [[ "$executable" != "0" ]] || continue
+
+    case "$mode:$name" in
+      rpagentos:*) ;;
+      tickets:0001_*) key="20260708500000" ;;
+      tickets:0002_*) key="20260708500002" ;;
+      tickets:20260708000002_*|tickets:20260708000003_*) continue ;;
+      tickets:*_shared_remote.sql) continue ;;
+      *) ;;
+    esac
+
+    if [[ -z "${key:-}" ]]; then
+      version="${name%%_*}"
+      [[ "$version" =~ ^[0-9]{14}$ ]] || {
+        echo "ERROR: unsupported migration identity $owner/$name" >&2
+        exit 1
+      }
+      key="$version"
+    fi
+    printf '%s\t%s\t%s\t%s\n' "$key" "$owner" "$name" "$file" >> "$QUEUE"
+    key=""
+  done
+}
+
+add_stream "retailpulses/RPagentOS@$RPAGENTOS_SHA" "$OWNER_SOURCE/supabase/migrations" rpagentos
+add_stream "retailpulses/ticket-handling@$COMMERCE_SHA" "$ROOT/apps/tickets/supabase/migrations" tickets
+add_stream "retailpulses/OrderMgmt@$COMMERCE_SHA" "$ROOT/apps/orders/supabase/migrations" orders
+add_stream "retailpulses/inquiry-automation@$COMMERCE_SHA" "$ROOT/apps/inquiry/supabase/migrations" inquiry
+printf '%s\t%s\t%s\t%s\n' \
+  "20260708500001" "local-assembly#6" \
+  "20260708500001_ticket_hotfix_view_rebuild.sql" \
+  "$ROOT/local-env/cross-domain/compat/20260708500001_ticket_hotfix_view_rebuild.sql" >> "$QUEUE"
+printf '%s\t%s\t%s\t%s\n' \
+  "20260708599999" "local-assembly#6" \
+  "20260708599999_ticket_timestamp_core_view_rebuild.sql" \
+  "$ROOT/local-env/cross-domain/compat/20260708599999_ticket_timestamp_core_view_rebuild.sql" >> "$QUEUE"
+printf '%s\t%s\t%s\t%s\n' \
+  "20260709000099" "local-assembly#6" \
+  "20260709000099_ticket_hardening_view_rebuild.sql" \
+  "$ROOT/local-env/cross-domain/compat/20260709000099_ticket_hardening_view_rebuild.sql" >> "$QUEUE"
+printf '%s\t%s\t%s\t%s\n' \
+  "20260711999999" "local-assembly#6" \
+  "20260711999999_ticket_product_view_rebuild.sql" \
+  "$ROOT/local-env/cross-domain/compat/20260711999999_ticket_product_view_rebuild.sql" >> "$QUEUE"
+
+{
+  printf 'local_sequence\toriginal_order_key\towner\tsource_path\tsha256\n'
+  sequence=0
+  while IFS=$'\t' read -r key owner name file; do
+    sequence=$((sequence + 1))
+    local_version="$(printf '1%013d' "$sequence")"
+    target="$MIGRATIONS_DIR/${local_version}_${name}"
+    cp "$file" "$target"
+    digest="$(shasum -a 256 "$file" | awk '{print $1}')"
+    if [[ "$owner" == retailpulses/RPagentOS@* ]]; then
+      source_path="supabase/migrations/$name"
+    else
+      source_path="${file#$ROOT/}"
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\n' \
+      "$local_version" "$key" "$owner" "$source_path" "$digest"
+  done < <(LC_ALL=C sort -t $'\t' -k1,1 -k2,2 -k3,3 "$QUEUE")
+} > "$MANIFEST"
+
+echo "Prepared $(($(wc -l < "$MANIFEST") - 1)) canonical owner migrations."
+echo "Runtime: $RUNTIME_DIR"
+echo "Manifest: $MANIFEST"

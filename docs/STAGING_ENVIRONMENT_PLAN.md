@@ -1,12 +1,13 @@
 # Commerce Ops staging environment plan
 
-Status: Proposed for review; no staging resources have been provisioned
+Status: Local-first implementation in progress; no hosted staging resources are
+authorized or required
 
 Local evidence: [`LOCAL_STAGING_POC.md`](LOCAL_STAGING_POC.md) proves the
 disposable Inquiry database lifecycle with synthetic data. It also confirms
-that a hosted/shared replay still needs an owner-approved cross-repository
-migration assembly order; Inquiry migrations consume RPagentOS catalog objects
-that are not canonicalized in this repository.
+that a shared local replay needs an owner-approved cross-repository migration
+assembly order. Current progress and the RPagentOS-owned blocker are recorded
+in [`CROSS_DOMAIN_DATABASE_ASSEMBLY.md`](CROSS_DOMAIN_DATABASE_ASSEMBLY.md).
 
 Tracking issue: [`commerce-ops#6`](https://github.com/retailpulses/commerce-ops/issues/6)
 
@@ -16,29 +17,33 @@ Program coordination: [`retailpulses/inbox#100`](https://github.com/retailpulses
 
 ## Purpose
 
-Create a production-like environment in which a reviewed `commerce-ops` commit
-can be deployed, exercised with synthetic data, and promoted as the same source
-SHA without risking production data or external marketplace mutations.
+Create a production-like local environment in which a reviewed `commerce-ops`
+commit can be assembled from canonical owner migrations and exercised with
+synthetic data without risking production data or external marketplace
+mutations. Hosted deployment and same-SHA promotion remain future, separately
+approved extensions of this local evidence; they are not prerequisites for the
+local staging program.
 
 Staging is an environment boundary, not a new application architecture. The
 Ops Portal, Inquiry, Orders, and Tickets domains remain independently
 deployable and independently reversible.
 
-## Entry gate
+## Local-first entry gate
 
-Resource provisioning starts only after the Phase 2 deployment mechanics in
-`commerce-ops#13` are sufficiently proven to reuse safely:
+Local implementation may proceed now and requires no cloud provisioning,
+production-source cutover, hosted credential, or marketplace credential. Its
+entry conditions are:
 
-- every deployable surface has an owner and target inventory;
-- its build artifact can be produced from `commerce-ops`;
-- exact source SHA is observable after deployment;
-- repository/environment secret names and permissions are mapped;
-- production rollback remains independent per runtime;
-- no legacy repository is required to build a staging artifact.
+- Docker Desktop and a pinned/recorded Supabase CLI are available locally;
+- the database assembly uses canonical migrations from each domain owner;
+- owner provenance and collision handling are recorded in the repository;
+- fixtures are synthetic and external mutation credentials are absent;
+- reset and destroy fail closed and cannot resolve to a hosted project.
 
-Planning, naming review, fixture design, and least-privilege principal design
-may proceed before that gate. Production cutover does not have to be fully
-finished before those read-only design tasks begin.
+Phase 2 deployment mechanics in `commerce-ops#13` become an entry gate only if
+a later proposal asks to provision hosted staging runtimes or demonstrate
+same-SHA cloud promotion. Local database and application acceptance must not be
+blocked on that future work.
 
 ## Non-goals and invariants
 
@@ -53,7 +58,19 @@ finished before those read-only design tasks begin.
 - Do not extract shared packages as part of staging setup.
 - Use synthetic or irreversibly anonymized fixtures only.
 
-## Target topology
+## Local-first target topology
+
+The current target is one disposable Supabase CLI stack on the operator's
+MacBook. It may contain multiple owner-controlled database domains so their
+real foreign keys and read contracts can be tested together, but it does not
+collapse their ownership or runtime boundaries. Applications connect only to
+the generated local endpoints; external integrations remain fixture-only.
+
+No new Supabase cloud project, GitHub Environment, Cloudflare identity, VPS
+service, DNS record, schedule, webhook, or external credential is part of this
+stage.
+
+## Future hosted topology (not authorized)
 
 The proposed naming convention is descriptive and must be checked for
 availability during provisioning. Final platform-generated IDs belong in a
@@ -73,15 +90,17 @@ different branch.
 
 ### Data boundary
 
-Use a dedicated staging Supabase project. Separate schemas inside the
-production project are rejected because a mistaken project URL or broad key
-would retain production reachability.
+The current environment is the disposable local Supabase project generated
+from repository-controlled configuration. It must not link to or reuse any
+hosted Supabase project. Creating a dedicated hosted staging project is not
+approved by this plan and requires a later explicit decision if local evidence
+shows that a hosted environment is necessary.
 
-Within staging Supabase, preserve the existing domain ownership model and use
-separate least-privilege runtime principals for Inquiry, Orders, Tickets, and
-any platform-specific adapters. Ops Portal receives read/aggregation access
-only where its existing contracts require it. No universal monorepo service
-key is permitted.
+Within local Supabase, preserve the existing domain ownership model and test
+the same role/grant boundaries where the canonical migrations define them.
+Local CLI development keys are disposable and must never be treated as a
+shared runtime principal. No universal hosted monorepo service key is
+permitted or required.
 
 Database migrations must be applied from reviewed repository migrations in a
 deterministic order. Seed data must be synthetic, idempotent, and disposable.
@@ -110,7 +129,11 @@ Each external integration is classified before enablement:
 Feature flags are defense in depth, not the primary boundary. Mutation-capable
 production credentials must be absent even when a write flag is false.
 
-## GitHub environment and workflow model
+## Future GitHub environment and workflow model
+
+This section is deferred and is not part of the local-first implementation.
+It requires a separate approval before any GitHub Environment or deployment
+credential is created.
 
 Create one protected GitHub Environment named `staging`. Store only deployment
 credentials and non-secret target identifiers required for staging. Runtime
@@ -201,28 +224,28 @@ Minimum business-flow acceptance:
 
 ## Implementation sequence
 
-### Stage 0 — inventory and decisions
+### Stage 0 — local inventory and decisions
 
 - Inventory every deployable surface, binding, scheduler, URL, secret name,
   runtime principal, and rollback mechanism.
-- Confirm staging naming and Cloudflare/Supabase/VPS account ownership.
-- Record which external providers offer sandboxes or read-only principals.
+- Record canonical migration provenance and cross-domain dependencies.
+- Resolve migration identity collisions without changing domain ownership.
 - Define synthetic fixtures and retention/reset policy.
-- Approve the cost ceiling and expected monthly Actions/runtime usage.
 
-Deliverable: reviewed topology table and completed prerequisite section in
-`commerce-ops#6`.
+Deliverable: repository-controlled assembly manifest and dependency report.
 
-### Stage 1 — isolated foundations
+### Stage 1 — canonical local database assembly
 
-- Create the protected GitHub `staging` Environment.
-- Provision the dedicated staging Supabase project and scoped principals.
-- Provision staging-only Cloudflare/VPS/storage identities without schedules.
-- Seed synthetic fixtures and verify production is unreachable.
+- Assemble RPagentOS/product-catalog, Inquiry, Tickets, and Orders migrations
+  from their canonical owner sources in an explicit deterministic order.
+- Rebuild from zero in the disposable local Supabase stack.
+- Seed synthetic cross-domain fixtures and verify production is unreachable.
+- Prove reset and destroy with no hosted credential.
 
-Deliverable: non-secret resource inventory plus access/isolation evidence.
+Deliverable: passing local assembly plus provenance, collision, reset, resource,
+and isolation evidence.
 
-### Stage 2 — deploy one domain at a time
+### Stage 2 — run local applications one domain at a time
 
 Recommended order:
 
@@ -232,8 +255,8 @@ Recommended order:
 4. Orders, last because it retains transitional Baserow compatibility and has
    the broadest marketplace/scheduler surface.
 
-For each domain: deploy, verify exact SHA, run domain smoke tests, exercise
-rollback, and attach evidence before proceeding.
+For each domain: run against local endpoints, verify exact source SHA, run
+synthetic smoke tests, exercise reset, and attach evidence before proceeding.
 
 ### Stage 3 — integrated acceptance
 
@@ -242,39 +265,37 @@ rollback, and attach evidence before proceeding.
 - Enable only the minimum safe background triggers needed for validation.
 - Measure Actions/runtime cost and remove redundant executions.
 
-### Stage 4 — promotion readiness
+### Stage 4 — optional hosted/promotion proposal
 
-- Prove per-domain same-SHA/artifact promotion mechanics.
-- Prove production remains manually gated and independently reversible.
-- Publish the operator runbook and incident/rollback ownership matrix.
+- Decide from local evidence whether hosted staging adds necessary coverage.
+- If it does, submit a separate architecture/cost/security proposal before
+  provisioning any cloud resource or credential.
+- Keep production manually gated and independently reversible.
 
-This stage prepares production promotion; it does not itself authorize a
-production deployment.
+This stage is not authorized by the local-first plan and does not itself
+authorize hosted provisioning or production deployment.
 
-## Review decisions required before provisioning
+## Decisions deferred until a hosted environment is proposed
 
-1. Approve a dedicated Supabase staging project and its expected cost.
-2. Approve the staging runtime naming convention and account placement.
+1. Decide whether hosted staging is necessary after local acceptance.
+2. If necessary, approve its runtime naming, account placement, and cost.
 3. Decide which marketplace integrations may use sandbox/read-only access and
    which must remain fixture-only.
 4. Approve the monthly GitHub Actions and platform runtime cost ceiling.
 5. Name the human approver(s) for the protected `staging` environment and later
    per-domain production promotion.
 
-## Definition of done
+## Local-first definition of done
 
 - [ ] topology and ownership inventory reviewed;
-- [ ] dedicated staging runtime identities exist for every required surface;
-- [ ] dedicated staging Supabase project and scoped principals exist;
+- [ ] canonical cross-domain owner migrations rebuild locally from zero;
+- [ ] no hosted Supabase project or production credential is required;
 - [ ] production credentials and customer data are absent;
 - [ ] marketplace/customer writes are physically unavailable by default;
 - [ ] schedules are disabled or individually proven safe;
-- [ ] app-specific path-scoped staging workflows are installed;
-- [ ] exact SHA and artifact digest are observable for each surface;
+- [ ] exact local source SHA is observable for each tested surface;
 - [ ] representative synthetic Inquiry, Orders, and Tickets flows pass;
 - [ ] authenticated Ops Portal acceptance passes against staging URLs;
 - [ ] rollback is verified independently per runtime family;
-- [ ] same-SHA production promotion mechanics are demonstrated but remain
-      manually gated;
-- [ ] Actions and runtime usage fit the approved cost ceiling;
+- [ ] optional hosted/promotion work remains separately gated;
 - [ ] evidence and operating ownership are linked from `commerce-ops#6`.
