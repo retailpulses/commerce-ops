@@ -2,14 +2,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE_DIR="$ROOT/local-env/supabase"
-RUNTIME_DIR="$ROOT/.tmp/local-env"
-PROJECT_ID="commerce_ops_inquiry_local"
+SOURCE_DIR="$ROOT/local-env/cross-domain"
+RUNTIME_DIR="$ROOT/.tmp/cross-domain-local"
+PROJECT_ID="commerce_ops_cross_domain_local"
 DB_CONTAINER="supabase_db_$PROJECT_ID"
 
 # This workflow is local-only. Do not allow inherited hosted-project settings
 # to become an accidental control path now or after future CLI changes.
 unset SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID
+unset SUPABASE_URL SUPABASE_REST_URL SUPABASE_SERVICE_ROLE_KEY
 
 usage() {
   echo "Usage: ./scripts/local-env start|reset|smoke|status|stop|destroy|measure|check-bindings"
@@ -22,22 +23,16 @@ require_prerequisites() {
 }
 
 prepare_runtime() {
-  if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/local-env" ]]; then
+  if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/cross-domain-local" ]]; then
     echo "ERROR: refusing to prepare unexpected runtime path." >&2
     exit 1
   fi
-  rm -rf "$RUNTIME_DIR"
-  mkdir -p "$RUNTIME_DIR/supabase/migrations"
-  cp "$SOURCE_DIR/config.toml" "$RUNTIME_DIR/supabase/config.toml"
-  cp "$SOURCE_DIR/seed.sql" "$RUNTIME_DIR/supabase/seed.sql"
-  cp "$SOURCE_DIR/local_dependency_contract.sql" \
-    "$RUNTIME_DIR/supabase/migrations/20260720000000_local_dependency_contract.sql"
-  cp "$ROOT"/apps/inquiry/supabase/migrations/*.sql "$RUNTIME_DIR/supabase/migrations/"
+  "$ROOT/scripts/prepare-local-db-assembly"
 }
 
 run_smoke() {
   docker inspect "$DB_CONTAINER" >/dev/null 2>&1 || {
-    echo "ERROR: local Inquiry database is not running; run start first." >&2
+    echo "ERROR: local Commerce Ops database is not running; run start first." >&2
     exit 1
   }
   docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres < "$SOURCE_DIR/smoke.sql"
@@ -74,7 +69,7 @@ check_bindings() {
 start() {
   require_prerequisites
   if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
-    echo "Local Inquiry environment is already running."
+    echo "Local Commerce Ops environment is already running."
   else
     prepare_runtime
     /usr/bin/time -p supabase start --workdir "$RUNTIME_DIR"
@@ -90,7 +85,7 @@ start() {
 reset() {
   require_prerequisites
   docker inspect "$DB_CONTAINER" >/dev/null 2>&1 || {
-    echo "ERROR: local Inquiry environment is not running; run start first." >&2
+    echo "ERROR: local Commerce Ops environment is not running; run start first." >&2
     exit 1
   }
   check_bindings
@@ -104,7 +99,7 @@ stop_env() {
   if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
     supabase stop --workdir "$RUNTIME_DIR"
   else
-    echo "Local Inquiry environment is already stopped."
+    echo "Local Commerce Ops environment is already stopped."
   fi
 }
 
@@ -113,7 +108,7 @@ destroy() {
   if docker inspect "$DB_CONTAINER" >/dev/null 2>&1; then
     supabase stop --no-backup --workdir "$RUNTIME_DIR"
   fi
-  if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/local-env" ]]; then
+  if [[ "$RUNTIME_DIR" != "$ROOT/.tmp/cross-domain-local" ]]; then
     echo "ERROR: refusing to remove unexpected runtime path." >&2
     exit 1
   fi
@@ -122,13 +117,13 @@ destroy() {
     echo "ERROR: database container still exists after destroy." >&2
     exit 1
   fi
-  echo "Local Inquiry environment destroyed cleanly."
+  echo "Local Commerce Ops environment destroyed cleanly."
 }
 
 measure() {
   require_prerequisites
   docker inspect "$DB_CONTAINER" >/dev/null 2>&1 || {
-    echo "ERROR: local Inquiry environment is not running; run start first." >&2
+    echo "ERROR: local Commerce Ops environment is not running; run start first." >&2
     exit 1
   }
   docker stats --no-stream --format '{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.BlockIO}}' \
@@ -140,7 +135,11 @@ case "${1:-}" in
   start) start ;;
   reset) reset ;;
   smoke) require_prerequisites; run_smoke ;;
-  status) require_prerequisites; supabase status --workdir "$RUNTIME_DIR" ;;
+  status)
+    require_prerequisites
+    test -f "$RUNTIME_DIR/release.env" && cat "$RUNTIME_DIR/release.env"
+    supabase status --workdir "$RUNTIME_DIR"
+    ;;
   stop) stop_env ;;
   destroy) destroy ;;
   measure) measure ;;

@@ -1,167 +1,134 @@
-# Local disposable Commerce Ops staging POC
+# Local disposable Commerce Ops staging
 
-Status: Inquiry POC verified locally on 2026-09-10
+Status: full local-first acceptance verified on 2026-09-11
 
-This is a disposable developer environment, not the hosted staging environment
-proposed in `docs/STAGING_ENVIRONMENT_PLAN.md`. It creates only Docker resources
-named for `commerce_ops_inquiry_local`. It does not link a Supabase cloud
-project, run application schedules, or invoke marketplace adapters.
+This is the default Commerce Ops staging/integration environment. It is a
+disposable Supabase/PostgreSQL 17 stack named
+`commerce_ops_cross_domain_local`; it is not linked to a hosted project and it
+does not provision cloud infrastructure.
 
-## Quick start
+## Operator workflow
 
 From the repository root in a VS Code Terminal:
 
 ```bash
-# Supabase CLI 2.109.1 publishes on wildcard interfaces. First enable a host
-# firewall or use an isolated/trusted network, then acknowledge that boundary:
+# Supabase CLI 2.109.1 publishes on wildcard interfaces. Enable the macOS
+# firewall or use an isolated/trusted network before acknowledging this.
 LOCAL_ENV_ALLOW_WILDCARD_BINDINGS=1 make local-env-start
+make local-env-status
+make local-env-smoke
 make local-env-reset
 make local-env-measure
 make local-env-destroy
 ```
 
-The equivalent direct interface is:
+The equivalent script accepts `start`, `status`, `smoke`, `reset`, `measure`,
+`stop`, `destroy`, and `check-bindings`. Docker Desktop and Supabase CLI are
+prerequisites; the scripts check them and install nothing. Verified versions
+were Docker Desktop 29.4.1 (ARM64) and Supabase CLI 2.109.1.
 
-```bash
-LOCAL_ENV_ALLOW_WILDCARD_BINDINGS=1 ./scripts/local-env start
-./scripts/local-env reset
-./scripts/local-env smoke
-./scripts/local-env status
-./scripts/local-env stop
-./scripts/local-env destroy
-```
+`start` regenerates `.tmp/cross-domain-local`, assembles the pinned owner
+migrations, starts Supabase, checks actual network bindings, and runs the
+synthetic smoke transaction. `reset` rebuilds from zero and repeats acceptance.
+`destroy` uses `--no-backup`, removes the generated workdir, and verifies that
+the project database container is gone.
 
-Prerequisites are Docker Desktop and Supabase CLI. The script checks both and
-installs nothing. Verified versions were Docker Desktop 29.4.1 on ARM64 and
-Supabase CLI 2.109.1. The database uses PostgreSQL 17.
+## Canonical assembly and ownership
 
-`start` creates a generated CLI workdir at `.tmp/local-env`, copies the
-canonical Inquiry migrations into it without editing them, applies a local-only
-dependency contract first, seeds synthetic records, and runs the smoke flow.
-`reset` recreates the database and repeats the same migration, seed, and smoke
-sequence. `stop` stops the stack; `destroy` uses `--no-backup`, removes the
-generated workdir, and asserts that the database container no longer exists.
+The assembly preserves the bounded owners:
 
-The wrapper is fail-closed for network binding. After the CLI starts, it
-inspects the actual Kong and Postgres Docker port bindings. If either resolves
-to `0.0.0.0` or `::`, the default command immediately destroys the stack. The
-explicit `LOCAL_ENV_ALLOW_WILDCARD_BINDINGS=1` acknowledgement is accepted only
-when the operator has enabled a host firewall or is using an isolated/trusted
-network. Re-check a running stack with `./scripts/local-env check-bindings`.
+| Stream | Canonical source |
+|---|---|
+| Product catalog/shared schema | `retailpulses/RPagentOS@cdb1f936c210744f8ed604c3cecc075e58083d5e` |
+| Inquiry | `apps/inquiry/supabase/migrations` |
+| Tickets | `apps/tickets/supabase/migrations` |
+| Orders | `apps/orders/supabase/migrations` |
 
-## Migration ownership and order
+Inquiry migrations are not independently complete: they consume RPagentOS
+catalog objects. Tickets also carries grandfathered/shared history and Orders
+depends broadly on catalog state. `scripts/prepare-local-db-assembly` therefore
+creates 117 ordered migration/contract steps and a SHA-256 manifest recording
+owner, source path, original order, local execution identity, and content hash.
+Monotonic local identities handle cross-repository timestamp collisions without
+renaming deployed owner history.
 
-The repository has three independent migration owners. They share one hosted
-Supabase project today, but adjacency in this monorepo does not create a single
-safe global migration stream.
+RPagentOS PRs
+[#128](https://github.com/retailpulses/RPagentOS/pull/128) and
+[#130](https://github.com/retailpulses/RPagentOS/pull/130) restored the missing
+pricing baseline/function and CatalogSync operational tables at their owner.
+Five local compatibility steps only bridge deterministic replay mechanics: four
+drop derived Ticket views before their owner migrations recreate incompatible
+shapes, and one supplies the schema-only `mercari_before_discount_price`
+contract described below. See
+[`CROSS_DOMAIN_DATABASE_ASSEMBLY.md`](CROSS_DOMAIN_DATABASE_ASSEMBLY.md).
 
-| App | Owned domain | SQL files | Replay finding |
-|---|---|---:|---|
-| `apps/inquiry` | `inquiry_management` | 7 | Ordered by its seven timestamped filenames; not independently complete because it consumes catalog-owned objects. |
-| `apps/orders` | `order_management` | 24 | App-owned order stream; consumes `product_catalog`; not an Inquiry bootstrap source. |
-| `apps/tickets` | `ticketing` | 70 | Mixed grandfathered sequential/timestamp names, shared-history placeholders, and RPagentOS dependencies; not an Inquiry bootstrap source. |
+Two RPagentOS migrations are deliberately recorded but not executed locally:
 
-The canonical POC sequence is:
+- `20260824080100_seed_mercari_monthly_metrics.sql` contains production-derived
+  business aggregates and assumes hosted shop accounts.
+- `20260905090000_shop4_listing_prices.sql` contains production listing IDs and
+  prices. Its required column/constraint are supplied by the explicit local
+  schema contract, with no canonical ownership claim or data rows.
 
-1. a local-only, non-authoritative contract shape for RPagentOS-owned catalog
-   objects;
-2. `apps/inquiry/supabase/migrations/*.sql`, lexically ordered by their unique
-   14-digit timestamps;
-3. `local-env/supabase/seed.sql` containing synthetic fixtures only.
+The exclusions are emitted in `assembly-exclusions.tsv`; release identity in
+`release.env` records both repository revisions, the manifest hash, and
+`SYNTHETIC_ONLY=true`, `OUTBOUND_ENABLED=false`, and
+`SCHEDULES_ENABLED=false`.
 
-The dependency contract provides only `platform_accounts`, `product_variants`,
-`platform_listings`, `platform_listing_skus`, and `product_platform_links`.
-Inquiry does not become owner of those tables. A production-like shared staging
-replay must replace this stub with reviewed canonical RPagentOS migrations.
+## Acceptance evidence
 
-There is no currently valid repo-wide “sort every SQL filename and apply”
-order. Confirmed gaps are:
+The full clean replay completed through the latest Order migration. The smoke
+test runs in one transaction and rolls back its fixed synthetic identities.
+It proved:
 
-- Inquiry governance already states that its migration set needs externally
-  owned `platform_accounts` and `product_variants`; the current catalog linker
-  also requires three listing/link tables.
-- Orders and Tickets both use migration timestamp `20260710000000` for
-  different SQL. Additional filename overlaps exist at `20260716000000` and
-  `20260716120000`, where Ticket files are shared hosted-history artifacts.
-- Tickets retains `0001_`/`0002_` migrations, later timestamped core SQL, 18
-  zero-byte/shared history artifacts documented by its governance file, and
-  dependencies on several RPagentOS-owned domains.
-- The authoritative cross-repository bootstrap order therefore remains outside
-  this repository. It must come from the owner migration registry/history, not
-  be inferred from app directory order.
+- Inquiry intake, persistence, product relation, detail readback, and compose
+  draft with outbound physically unavailable;
+- Ticket intake, evidence, lifecycle, share/view data, and information-only
+  resolution with delivery disabled;
+- Order ingest, status reconciliation, fulfillment transition, and the pending
+  deterministic fake-adapter boundary;
+- one shared catalog variant read by all domains without cross-domain writes;
+- no inquiry outbound operation, sent ticket message, external operation
+  attempt, platform account, or durable synthetic business row remained.
 
-## Synthetic Inquiry proof
+The returned result marked `inquiry`, `tickets`, `orders`,
+`cross_domain_catalog_relation`, and `outbound_physically_unavailable` as
+`pass`. A clean reset reproduced the result. App-level evidence also passed:
+Inquiry Worker 78 tests (1 skipped), Tickets Worker 307 tests, Orders 1,124
+tests (2 skipped), and Ops Portal 18 gateway/auth/deep-link tests plus its Vite
+build. Ops Portal's local JWT/access tests are the safe development-auth
+equivalent; no Cloudflare identity was provisioned.
 
-The seed creates one fake account, variant, listing/SKU, and inquiry using
-reserved-looking stable UUIDs and `synthetic-*` identifiers. The Inquiry
-catalog-link trigger creates exactly one product link. The smoke SQL then:
+## Isolation and network safety
 
-1. reads the synthetic inquiry by external identity;
-2. asserts the product link exists;
-3. writes a synthetic note;
-4. reads the note back through `inquiry_detail_vw`.
-
-The verified result after both start and reset was one inquiry, zero messages,
-one product link, and `result=pass`. Eight migrations appear in local migration
-history: one local dependency contract plus seven unmodified Inquiry
-migrations.
-
-## Isolation and safety
-
-- Generated client URLs use loopback and ports 55321/55322; no hosted project
-  reference exists. Actual Docker binding is checked separately and fails
-  closed as described above.
-- Hosted Supabase control variables are unset by the wrapper. No `.env` file is
-  read and no production URL, token, customer record, or marketplace credential
-  is needed.
-- Studio, Storage, Realtime, local mail, analytics, and Edge Runtime are
-  disabled. No app Worker, timer, webhook, or external-write code is started.
-- Supabase CLI 2.109.1 publishes the API and database Docker ports on
-  `0.0.0.0`/`::`, despite the generated URLs using `127.0.0.1`, and exposes no
-  supported per-project bind-address flag. The wrapper therefore destroys such
-  a stack by default. The override requires a macOS host firewall or an
-  isolated/trusted network; synthetic data and public local-development keys do
-  not make wildcard binding acceptable by themselves.
-- `destroy` is deliberately narrower than global Docker cleanup: it targets
-  only this project and does not prune unrelated images, containers, or volumes.
+- Hosted Supabase variables are unset; no `.env`, production URL/token/data,
+  marketplace credential, or customer-message credential is read.
+- No Worker, timer, webhook, scheduler, or external adapter is started.
+- Storage is local and exists only because canonical Ticket migrations require
+  its schema. Studio, Realtime, mail, analytics, and Edge Runtime are disabled.
+- Supabase CLI 2.109.1 exposes Kong and Postgres on `0.0.0.0`/`::` and has no
+  per-project bind-address option. The wrapper detects the actual Docker
+  bindings, fails closed, destroys the stack, and exits nonzero by default.
+  The explicit override is valid only with a host firewall or isolated/trusted
+  network. The tested Mac firewall was disabled, so the default behavior is the
+  safe one.
+- Destroy targets only this project; it does not prune unrelated Docker state.
 
 ## Measured footprint
 
-Measured on a MacBook M1 Pro with 32 GiB physical RAM. Docker Desktop exposed
-7.75 GiB (8,321,712,128 bytes) to containers.
+Measured on the MacBook M1 Pro with 32 GiB RAM; Docker Desktop exposed 7.75
+GiB. CPU and memory are point-in-time observations.
 
 | Measurement | Observed value |
 |---|---:|
-| Active containers | 4: Postgres, PostgREST, GoTrue, Kong |
-| Idle CPU snapshot | 0.34% aggregate |
-| Idle resident memory snapshot | 309.83 MiB aggregate |
-| Postgres logical database size | 11 MB |
-| Project Docker volume | 51.93 MB |
-| Container writable layers | about 254 KiB aggregate |
-| Four referenced image contents | 594,825,005 bytes total; already cached, so no incremental pull in this run |
-| Clean start, cached images | 23.13 seconds |
-| Full database reset | 12.94 seconds |
+| Active containers | 5: Postgres, Storage, PostgREST, GoTrue, Kong |
+| CPU snapshot | 3.41% aggregate |
+| Resident memory snapshot | 575.47 MiB aggregate |
+| PostgreSQL logical database | 20,737,171 bytes |
+| Project database volume | 86.28 MB |
+| Generated runtime workdir | 7.4 MiB (7,540 KiB) |
+| Clean start, cached images | 25.24 seconds |
+| Clean database reset | 24.97 seconds |
 
-CPU and RAM are point-in-time idle measurements and will vary. Docker block I/O
-is cumulative and is not a disk-footprint measure. The project volume and
-logical database values are the relevant disposable data footprint.
-
-## Implications for hosted staging and PR #33
-
-This POC validates the local lifecycle and Inquiry-owned SQL. The next
-local-first step is the owner-ordered database assembly documented in
-[`CROSS_DOMAIN_DATABASE_ASSEMBLY.md`](CROSS_DOMAIN_DATABASE_ASSEMBLY.md):
-
-- use the pinned canonical RPagentOS catalog migration history;
-- define collision-free cross-repository migration identities/order without
-  renaming already-applied hosted history casually;
-- replay Inquiry, Tickets, and Orders as separately owned streams against that
-  owner baseline;
-- keep domain-specific principals and external writes physically unavailable;
-- treat this synthetic POC as local developer evidence, not production-source
-  parity or hosted runtime acceptance evidence.
-
-The current assembly is blocked because RPagentOS migrations omit catalog
-columns and a pricing function that later owner SQL assumes already exist. That
-gap must be fixed by the catalog owner rather than hidden by an Inquiry or
-commerce-ops compatibility table.
+Destroy removed both the generated runtime and all project containers. No paid
+cloud project was created.

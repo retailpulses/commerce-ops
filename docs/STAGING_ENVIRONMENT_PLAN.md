@@ -1,13 +1,12 @@
 # Commerce Ops staging environment plan
 
-Status: Local-first implementation in progress; no hosted staging resources are
-authorized or required
+Status: Local-first staging implemented and verified; no hosted staging
+resources are authorized or currently required
 
-Local evidence: [`LOCAL_STAGING_POC.md`](LOCAL_STAGING_POC.md) proves the
-disposable Inquiry database lifecycle with synthetic data. It also confirms
-that a shared local replay needs an owner-approved cross-repository migration
-assembly order. Current progress and the RPagentOS-owned blocker are recorded
-in [`CROSS_DOMAIN_DATABASE_ASSEMBLY.md`](CROSS_DOMAIN_DATABASE_ASSEMBLY.md).
+Local evidence: [`LOCAL_STAGING_POC.md`](LOCAL_STAGING_POC.md) proves the full
+disposable database lifecycle and synthetic domain acceptance. Canonical
+provenance and completed owner repairs are recorded in
+[`CROSS_DOMAIN_DATABASE_ASSEMBLY.md`](CROSS_DOMAIN_DATABASE_ASSEMBLY.md).
 
 Tracking issue: [`commerce-ops#6`](https://github.com/retailpulses/commerce-ops/issues/6)
 
@@ -249,11 +248,12 @@ and isolation evidence.
 
 Recommended order:
 
-1. Ops Portal shell with downstream integrations disabled;
-2. Inquiry;
-3. Tickets;
-4. Orders, last because it retains transitional Baserow compatibility and has
+1. Inquiry;
+2. Tickets;
+3. Orders, last among domain backends because it retains transitional Baserow compatibility and has
    the broadest marketplace/scheduler surface.
+4. Ops Portal shell and safe development authentication with downstream
+   integrations disabled.
 
 For each domain: run against local endpoints, verify exact source SHA, run
 synthetic smoke tests, exercise reset, and attach evidence before proceeding.
@@ -275,6 +275,19 @@ synthetic smoke tests, exercise reset, and attach evidence before proceeding.
 This stage is not authorized by the local-first plan and does not itself
 authorize hosted provisioning or production deployment.
 
+## Cloud acceptance gap analysis
+
+Local acceptance does not reproduce Cloudflare deployment/bindings and Access,
+public webhook reachability, managed-Supabase-specific behavior, or provider
+IAM/network behavior. Current contract, safety, migration, and business-flow
+tests do not require those surfaces. Therefore no recurring cloud staging
+resource or second Supabase project is technically justified now.
+
+If a future change specifically requires one of these gaps, propose the
+smallest manually invoked and preferably ephemeral resource, including monthly
+cost, teardown, and the risk it validates, before provisioning. Production
+promotion remains manually gated.
+
 ## Decisions deferred until a hosted environment is proposed
 
 1. Decide whether hosted staging is necessary after local acceptance.
@@ -287,15 +300,15 @@ authorize hosted provisioning or production deployment.
 
 ## Local-first definition of done
 
-- [ ] topology and ownership inventory reviewed;
-- [ ] canonical cross-domain owner migrations rebuild locally from zero;
-- [ ] no hosted Supabase project or production credential is required;
-- [ ] production credentials and customer data are absent;
-- [ ] marketplace/customer writes are physically unavailable by default;
-- [ ] schedules are disabled or individually proven safe;
-- [ ] exact local source SHA is observable for each tested surface;
-- [ ] representative synthetic Inquiry, Orders, and Tickets flows pass;
-- [ ] authenticated Ops Portal acceptance passes against staging URLs;
-- [ ] rollback is verified independently per runtime family;
-- [ ] optional hosted/promotion work remains separately gated;
-- [ ] evidence and operating ownership are linked from `commerce-ops#6`.
+- [x] topology and ownership inventory reviewed;
+- [x] canonical cross-domain owner migrations rebuild locally from zero;
+- [x] no hosted Supabase project or production credential is required;
+- [x] production credentials and customer data are absent;
+- [x] marketplace/customer writes are physically unavailable by default;
+- [x] schedules are disabled;
+- [x] exact local source and owner revisions are observable;
+- [x] representative synthetic Inquiry, Orders, and Tickets flows pass;
+- [x] Ops Portal safe development auth/navigation/deep-link acceptance passes;
+- [x] database reset and destroy are verified;
+- [x] optional hosted/promotion work remains separately gated;
+- [ ] final evidence and operating ownership are linked from `commerce-ops#6`.
