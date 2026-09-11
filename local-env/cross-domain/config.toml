@@ -1,0 +1,47 @@
+project_id = "commerce_ops_cross_domain_local"
+
+[api]
+enabled = true
+port = 55421
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 55422
+shadow_port = 55420
+major_version = 17
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = false
+
+[studio]
+enabled = false
+port = 55423
+
+[local_smtp]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "20MiB"
+
+[realtime]
+enabled = false
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:55421"
+additional_redirect_urls = []
+jwt_expiry = 3600
+enable_signup = false

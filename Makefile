@@ -1,4 +1,4 @@
-.PHONY: local-env-start local-env-reset local-env-smoke local-env-status local-env-stop local-env-destroy local-env-measure
+.PHONY: local-env-start local-env-reset local-env-smoke local-env-status local-env-stop local-env-destroy local-env-measure local-db-assembly-prepare
 
 local-env-start:
 	./scripts/local-env start
@@ -20,3 +20,6 @@ local-env-destroy:
 
 local-env-measure:
 	./scripts/local-env measure
+
+local-db-assembly-prepare:
+	./scripts/prepare-local-db-assembly
