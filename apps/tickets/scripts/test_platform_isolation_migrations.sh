@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTAINER="ticket-platform-migration-test-$$"
 POSTGRES_IMAGE="${PLATFORM_TEST_POSTGRES_IMAGE:-postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73}"
+HARDENING_MIGRATION="$ROOT_DIR/supabase/migrations/20260911131531_harden_scoped_runtime_rpc_acl.sql"
+if rg -q 'claim_amazon_mail_send|finalize_amazon_mail_send|begin_amazon_mail_provider_mutation|promote_abandoned_amazon_send|resolve_amazon_mail_send_as_not_sent' "$HARDENING_MIGRATION"; then
+  echo "Batch 2 Amazon send/recovery RPC leaked into Batch 1 migration" >&2
+  exit 1
+fi
 cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
@@ -33,6 +38,12 @@ CREATE ROLE service_role;
 CREATE ROLE anon;
 CREATE ROLE authenticated;
 CREATE ROLE authenticator;
+CREATE ROLE supabase_admin;
+GRANT CREATE ON SCHEMA public TO supabase_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin
+  GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
 CREATE TABLE public.inbound_ticket_messages (
   id uuid PRIMARY KEY,
   source text NOT NULL,
@@ -388,10 +399,104 @@ ALTER TABLE public.inbound_ticket_messages
   ADD COLUMN IF NOT EXISTS full_payload jsonb NOT NULL DEFAULT '{}'::jsonb;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_inbound_ticket_messages_idempotency
   ON public.inbound_ticket_messages(idempotency_key);
+-- This focused fixture does not replay the legacy all-in-one Amazon pipeline,
+-- so provide its two ingestion RPC contracts for the scoped-ACL matrix.
+CREATE FUNCTION public.claim_amazon_mail_attachments(p_limit integer DEFAULT 25)
+RETURNS SETOF public.inbound_ticket_messages LANGUAGE sql SECURITY DEFINER
+SET search_path = public AS 'SELECT * FROM public.inbound_ticket_messages WHERE false';
+CREATE FUNCTION public.finalize_amazon_mail_attachment_batch(p_results jsonb)
+RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path = public AS 'SELECT 0';
 SQL
 "${psql_exec[@]}" -f /repo/supabase/migrations/20260909040000_platform_runtime_principals.sql >/dev/null
 "${psql_exec[@]}" -f /repo/supabase/migrations/20260909041000_platform_runtime_ownership.sql >/dev/null
+"${psql_exec[@]}" -f /repo/supabase/migrations/20260911131531_harden_scoped_runtime_rpc_acl.sql >/dev/null
 "${psql_exec[@]}" <<'SQL'
+DO $$
+DECLARE
+  v_function text;
+  v_functions text[] := ARRAY[
+    'public.assert_platform_runtime_owner_v1(text,text,text)',
+    'public.acquire_platform_runtime_lease_v1(text,text,text,uuid,text)',
+    'public.release_platform_runtime_lease_v1(uuid)',
+    'public.probe_mercari_send_runtime_v1()',
+    'public.probe_mercari_ingestion_runtime_v1()',
+    'public.probe_rakuten_send_runtime_v1()',
+    'public.probe_rakuten_ingestion_runtime_v1()',
+    'public.probe_amazon_send_runtime_v1()',
+    'public.probe_amazon_ingestion_runtime_v1()',
+    'public.ingest_mercari_webhook_event_v1(text,text,text,timestamptz,timestamptz,text)',
+    'public.claim_pending_mercari_webhook_messages(integer)',
+    'public.get_mercari_send_ticket_v1(uuid)',
+    'public.finalize_mercari_operator_message_send(uuid,uuid,text,text,text,timestamptz,text)',
+    'public.release_mercari_operator_message_claim_v1(uuid,uuid,text,text)',
+    'public.ingest_rakuten_rmesse_inquiry(uuid,text,text,text,text,text,timestamptz,jsonb)',
+    'public.upsert_rakuten_rmesse_sync_state_v1(uuid,timestamptz,timestamptz)',
+    'public.get_rakuten_send_ticket_v1(uuid)',
+    'public.finalize_rakuten_operator_message_send(uuid,uuid,text,text,text,timestamptz,text)',
+    'public.release_rakuten_operator_message_claim_v1(uuid,uuid,text,text)',
+    'public.ingest_amazon_mail_message_v3(uuid,text,text,text,timestamptz,text,text,text,text,text,text,integer)',
+    'public.claim_amazon_mail_attachments(integer)',
+    'public.finalize_amazon_mail_attachment_batch(jsonb)',
+    'public.upsert_amazon_mail_sync_state_v2(text,text,bigint,timestamptz,text,timestamptz,timestamptz,text,timestamptz,text,jsonb)',
+    'public.get_amazon_send_ticket_v1(uuid)'
+  ];
+BEGIN
+  FOREACH v_function IN ARRAY v_functions LOOP
+    IF has_function_privilege('anon', v_function, 'EXECUTE')
+       OR has_function_privilege('authenticated', v_function, 'EXECUTE')
+       OR has_function_privilege('public', v_function, 'EXECUTE') THEN
+      RAISE EXCEPTION 'broad role can still execute hardened RPC %', v_function;
+    END IF;
+    IF NOT has_function_privilege('service_role', v_function, 'EXECUTE') THEN
+      RAISE EXCEPTION 'documented service_role fallback lost RPC %', v_function;
+    END IF;
+  END LOOP;
+END $$;
+
+SET ROLE anon;
+DO $$ BEGIN
+  BEGIN
+    PERFORM public.probe_mercari_send_runtime_v1();
+    RAISE EXCEPTION 'anon unexpectedly executed a hardened runtime probe';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END $$;
+RESET ROLE;
+SET ROLE authenticated;
+DO $$ BEGIN
+  BEGIN
+    PERFORM public.acquire_platform_runtime_lease_v1(
+      'mercari-send','generation-1','version-mercari-send',
+      '77777777-7777-4777-8777-777777777776','work'
+    );
+    RAISE EXCEPTION 'authenticated unexpectedly executed a hardened lease RPC';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END $$;
+RESET ROLE;
+
+CREATE FUNCTION public.default_acl_postgres_probe() RETURNS void LANGUAGE sql AS 'SELECT';
+SET ROLE supabase_admin;
+CREATE FUNCTION public.default_acl_supabase_admin_probe() RETURNS void LANGUAGE sql AS 'SELECT';
+RESET ROLE;
+DO $$
+DECLARE v_function text;
+BEGIN
+  FOREACH v_function IN ARRAY ARRAY[
+    'public.default_acl_postgres_probe()',
+    'public.default_acl_supabase_admin_probe()'
+  ] LOOP
+    IF has_function_privilege('anon', v_function, 'EXECUTE')
+       OR has_function_privilege('authenticated', v_function, 'EXECUTE')
+       OR has_function_privilege('public', v_function, 'EXECUTE') THEN
+      RAISE EXCEPTION 'future function inherited broad execute: %', v_function;
+    END IF;
+    IF NOT has_function_privilege('service_role', v_function, 'EXECUTE') THEN
+      RAISE EXCEPTION 'future function lost service_role execute: %', v_function;
+    END IF;
+  END LOOP;
+END $$;
+
 INSERT INTO public.platform_runtime_ownership(component,routing_generation,active_version_id,state,in_flight_count)
 VALUES
   ('mercari-send','generation-1','version-mercari-send','active',0),
