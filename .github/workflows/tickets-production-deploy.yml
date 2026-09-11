@@ -1,0 +1,67 @@
+name: Tickets production deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact merged commerce-ops SHA
+        required: true
+        type: string
+      surface:
+        description: Independently deployable Cloudflare surface
+        required: true
+        type: choice
+        options: [portal, mercari-ingestion, mercari-send, rakuten-ingestion, rakuten-send, amazon-ingestion, amazon-send]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tickets-production-${{ inputs.surface }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    defaults: { run: { working-directory: apps/tickets/web/worker } }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, ref: "${{ inputs.release_sha }}" }
+      - name: Require exact merged main SHA
+        working-directory: ${{ github.workspace }}
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ inputs.release_sha }}"
+          echo "${{ inputs.release_sha }}" | grep -Eq '^[0-9a-f]{40}$'
+          git fetch origin main
+          git merge-base --is-ancestor "${{ inputs.release_sha }}" origin/main
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Build frontend first
+        working-directory: apps/tickets/web/frontend
+        run: npm ci && npm run typecheck && npm run lint && npm run build
+      - run: npm ci && npm run typecheck && npm test && npm run build
+      - id: config
+        run: |
+          case '${{ inputs.surface }}' in
+            portal) file=wrangler.toml ;;
+            *) file="wrangler.${{ inputs.surface }}.toml" ;;
+          esac
+          test -f "$file"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - name: Deploy existing Worker identity; preserve Cloudflare runtime secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config "${{ steps.config.outputs.file }}" --var "RELEASE_SHA:${{ inputs.release_sha }}"
+      - name: Portal exact-SHA smoke
+        if: inputs.surface == 'portal'
+        run: |
+          curl -fsS https://mercari-ticket-reports.jim-yang-3c5.workers.dev/tickets/api/release |
+            jq -e --arg sha '${{ inputs.release_sha }}' '.application == "tickets" and .release_sha == $sha'
+      - name: Provider deployment readback
+        if: inputs.surface != 'portal'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deployments list --config "${{ steps.config.outputs.file }}" --json | jq -e 'length > 0'
