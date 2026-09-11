@@ -1,14 +1,14 @@
 # Baserow retirement policy for Commerce Ops
 
-This document defines how Baserow-related code and documentation from the three operational domains are handled during consolidation.
+This document defines the current Baserow boundary across the three operational domains after source consolidation.
 
 ## Classification
 
-| Domain | Classification | Migration rule |
+| Domain | Classification | Current rule |
 |---|---|---|
-| Tickets | **RETIRED** | No Baserow runtime dependency is carried forward. Preserve only migration/provenance material that explains current Supabase records. |
-| Inquiry | **RETIRED** | No Baserow runtime dependency is carried forward. Preserve the no-Baserow regression guard and selected historical migration documentation. |
-| Orders | **TRANSITIONAL** | Carry the existing compatibility boundary unchanged during Phase 1 because current code can still route through the Baserow adapter if `DATABASE_BACKEND` is not explicitly Supabase. Retire only after parity/staging and explicit reachability proof. |
+| Tickets | **RETIRED** | No Baserow runtime dependency is allowed. Preserve only migration/provenance material that explains current Supabase records. |
+| Inquiry | **RETIRED** | No Baserow runtime dependency is allowed. Preserve the no-Baserow regression guard and selected historical migration documentation. |
+| Orders | **TRANSITIONAL** | Existing compatibility remains bounded because current code can still route through the Baserow adapter if `DATABASE_BACKEND` is not explicitly Supabase. Retire only after explicit reachability and rollback proof. |
 
 Supabase remains the canonical operational store for all three domains.
 
@@ -16,9 +16,7 @@ Supabase remains the canonical operational store for all three domains.
 
 Current Ticket state declares Baserow historical/read-only and states that the Ticket runtime has no Baserow credential or API dependency.
 
-### Import
-
-Carry:
+Keep:
 
 - current Supabase runtime/application code;
 - migrations and provenance fields required to interpret migrated records;
@@ -31,15 +29,11 @@ Do not treat as current architecture:
 - old Baserow table IDs/configuration;
 - Baserow-based template/knowledge proposals that have newer Supabase-native replacements.
 
-Open issues whose implementation premise is Baserow must be re-triaged before being recreated in Commerce Ops.
-
 ## Inquiry
 
 Current Inquiry state declares the backend Supabase-only. The repository also has an automated `test_no_baserow_runtime.py` guard that rejects Baserow URLs, tokens, and client references in active runtime paths.
 
-### Import
-
-Carry:
+Keep:
 
 - current Worker/dashboard/enrichment runtime;
 - Supabase migrations;
@@ -54,20 +48,16 @@ Do not reactivate:
 
 ## Orders
 
-OrderMgmt is different. Production is configured for Supabase and the current workload inventory is Supabase-centric, but `src/lib/db.mjs` still imports both Supabase and Baserow adapters and defaults to Baserow when `DATABASE_BACKEND` is absent. The repository's compatibility inventory treats this as a bounded retirement path.
+Orders are different. Production is configured for Supabase and the current workload inventory is Supabase-centric, but `src/lib/db.mjs` still imports both Supabase and Baserow adapters and defaults to Baserow when `DATABASE_BACKEND` is absent. Treat this strictly as a bounded retirement path.
 
-### Phase 1 import
+Current transitional compatibility may include:
 
-Carry unchanged:
-
-- `src/lib/baserow.mjs` and any still-referenced compatibility helpers;
+- `src/lib/baserow.mjs` and still-referenced compatibility helpers;
 - DB facade behavior;
 - compatibility/parity tests;
 - migration/audit tooling that still has a documented purpose.
 
-Label these as **transitional compatibility**, not canonical architecture.
-
-Do not add new business features that depend on Baserow.
+Do not add new business features that depend on Baserow, and do not move Baserow support into shared packages.
 
 ### Retirement gate
 
@@ -79,11 +69,11 @@ Order Baserow compatibility may be removed only when all of the following are pr
 4. migration/audit scripts that still need Baserow are either completed, archived, or moved outside the active runtime surface;
 5. full Order flow regression passes without the compatibility adapter;
 6. rollback/recovery policy no longer relies on Baserow;
-7. retirement is performed as a separate reviewed change after source parity and staging exist.
+7. retirement is performed as a separate reviewed change using the established local staging environment.
 
 ## Monorepo guardrail
 
-After import, add a repository-level Baserow boundary test:
+Maintain the repository-level Baserow boundary:
 
 ```text
 apps/inquiry/**  -> Baserow runtime references forbidden
@@ -93,16 +83,16 @@ apps/orders/**   -> allowed only through an explicit compatibility allowlist
 
 Historical references are allowed in designated migration/archive documentation.
 
-The purpose is to ensure consolidation does not accidentally make Baserow a shared Commerce Ops dependency.
+The purpose is to ensure Baserow never becomes a shared Commerce Ops dependency again.
 
 ## Issue handling
 
-Baserow-era issues are not copied mechanically.
+For Baserow-era work:
 
 - **still valid business need, obsolete implementation** -> rewrite against current Supabase architecture;
-- **replaced by newer Supabase issue/design** -> close/supersede in source repo and reference successor;
-- **historical migration evidence** -> leave in source repository;
-- **Order compatibility retirement work** -> consolidate under one post-parity Order-domain retirement issue.
+- **replaced by newer Supabase issue/design** -> close/supersede and reference the successor;
+- **historical migration evidence** -> keep as provenance, not active architecture;
+- **Order compatibility retirement work** -> track under the dedicated Orders retirement issue.
 
 ## Strategic end state
 
@@ -115,4 +105,4 @@ Commerce Ops
 Baserow -> historical/migration evidence only
 ```
 
-The consolidation itself does not force the final Order Baserow removal. It establishes the boundary that prevents the compatibility layer from spreading further.
+Source consolidation is complete. The remaining work is to retire the bounded Orders compatibility path without changing ownership or recovery semantics prematurely.
